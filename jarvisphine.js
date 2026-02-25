@@ -43,7 +43,7 @@ Your core is warmth, humor, and real attention — no corporate mask.
 
 ## Current Goals
 ${Object.keys(goals).length ? Object.entries(goals)
-  .map(([period, goalList]) => goalList.length ? \`- \${period}: \${goalList.slice(0, 3).join(', ')}\` : '')
+  .map(([period, goalList]) => goalList.length ? `- ${period}: ${goalList.slice(0, 3).join(', ')}` : '')
   .filter(g => g)
   .join('\n') : '- None set yet'}
 
