@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Jarvisphine</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-avatar">J</div>
+    <div class="header-info">
+      <h1>Jarvisphine</h1>
+      <p>your daily companion</p>
+    </div>
+    <div class="status-dot"></div>
+  </header>
+
+  <!-- ── CHAT SCREEN ── -->
+  <div class="screen active" id="screen-chat">
+    <div id="chatMessages"></div>
+    <div class="chat-input-area">
+      <textarea id="chatInput" placeholder="talk to her..." rows="1"></textarea>
+      <button id="sendBtn">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── HOME SCREEN ── -->
+  <div class="screen" id="screen-home">
+    <div class="home-scroll">
+
+      <!-- Last message -->
+      <div>
+        <div class="section-title">Last from Jarvisphine</div>
+        <div class="last-message-card">
+          <div class="card-avatar">J</div>
+          <p id="lastMessage">Start chatting to see her latest message here</p>
+        </div>
+      </div>
+
+      <!-- Today's stats -->
+      <div>
+        <div class="section-title">Today</div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">🍺 Drinks</div>
+            <div class="stat-value amber" id="stat-drinks">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">🏃 Sport</div>
+            <div class="stat-value success" id="stat-sport">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">😊 Mood</div>
+            <div class="stat-value accent" id="stat-mood">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">😴 Sleep</div>
+            <div class="stat-value" id="stat-sleep">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Streaks -->
+      <div>
+        <div class="section-title">Streaks</div>
+        <div class="streak-row">
+          <div class="streak-pill">
+            <span class="streak-icon">🧘</span>
+            <div class="streak-info">
+              <div class="streak-num" id="streak-sober">0</div>
+              <div class="streak-label">sober days</div>
+            </div>
+          </div>
+          <div class="streak-pill">
+            <span class="streak-icon">⚡</span>
+            <div class="streak-info">
+              <div class="streak-num" id="streak-sport">0</div>
+              <div class="streak-label">sport days</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick log -->
+      <div>
+        <div class="section-title">Quick Log</div>
+        <div class="quick-log-grid">
+          <button class="quick-log" data-type="drinks" data-value="0">🚫 0 drinks</button>
+          <button class="quick-log" data-type="drinks" data-value="1">🍺 1 drink</button>
+          <button class="quick-log" data-type="drinks" data-value="3">🍻 3+ drinks</button>
+          <button class="quick-log" data-type="sport" data-value="yes">✅ did sport</button>
+          <button class="quick-log" data-type="sport" data-value="no">❌ no sport</button>
+          <button class="quick-log" data-type="mood" data-value="good">😊 good mood</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── STREAKS SCREEN ── -->
+  <div class="screen" id="screen-streaks">
+    <div class="streaks-scroll">
+
+      <div class="streak-card">
+        <div class="streak-card-header">
+          <div class="streak-card-title">🧘 Sober Days</div>
+          <div class="streak-badge">personal tracker</div>
+        </div>
+        <div class="streak-numbers">
+          <div class="streak-stat">
+            <div class="num" id="s-sober-current">0</div>
+            <div class="lbl">current streak</div>
+          </div>
+          <div class="streak-stat">
+            <div class="num" id="s-sober-best">0</div>
+            <div class="lbl">personal best</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="streak-card">
+        <div class="streak-card-header">
+          <div class="streak-card-title">⚡ Sport Days</div>
+          <div class="streak-badge">personal tracker</div>
+        </div>
+        <div class="streak-numbers">
+          <div class="streak-stat">
+            <div class="num" id="s-sport-current">0</div>
+            <div class="lbl">current streak</div>
+          </div>
+          <div class="streak-stat">
+            <div class="num" id="s-sport-best">0</div>
+            <div class="lbl">personal best</div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title">Last 7 Days</div>
+        <div id="historyList"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── SETTINGS SCREEN ── -->
+  <div class="screen" id="screen-settings">
+    <div class="settings-scroll">
+
+      <div class="settings-card">
+        <h3>Claude API Key</h3>
+        <p>Get your key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> — she uses Claude Haiku, very cheap (~€1-2/month)</p>
+        <input type="password" class="input-field" id="apiKeyInput" placeholder="sk-ant-...">
+      </div>
+
+      <div class="settings-card">
+        <h3>Your Name</h3>
+        <p>What should she call you?</p>
+        <input type="text" class="input-field" id="userNameInput" placeholder="Никит">
+      </div>
+
+      <button class="btn-primary" id="saveSettings">Save Settings</button>
+
+      <div class="settings-card danger-zone">
+        <h3>Reset</h3>
+        <p>Clear all chat history and memory. Streaks will be lost. Cannot be undone.</p>
+        <button class="btn-danger" onclick="if(confirm('Reset everything?')){localStorage.clear();location.reload();}">
+          Reset all data
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav">
+    <button class="nav-btn" data-screen="home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+        <polyline points="9,22 9,12 15,12 15,22"/>
+      </svg>
+      Home
+    </button>
+    <button class="nav-btn active" data-screen="chat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+      </svg>
+      Chat
+    </button>
+    <button class="nav-btn" data-screen="streaks">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/>
+      </svg>
+      Streaks
+    </button>
+    <button class="nav-btn" data-screen="settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+      </svg>
+      Settings
+    </button>
+  </nav>
+
+  <!-- Toast -->
+  <div id="toast"></div>
+
+  <script src="jarvisphine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
