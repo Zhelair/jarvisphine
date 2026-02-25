@@ -1,522 +1,218 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Prompting Buddy</title>
-  <link rel="stylesheet" href="assets/style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Jarvisphine</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
-<body data-theme="modern" data-variant="default">
+<body>
 
-<header class="topbar">
-  <div class="brand" aria-label="Prompting Buddy">
-    <div class="brand__badge" aria-hidden="true">PB</div>
-    <div>
-      <div class="brand__name" id="brandName">Prompting Buddy</div>
-      <div class="brand__tag">Prompt Check + Vault</div>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-avatar">J</div>
+    <div class="header-info">
+      <h1>Jarvisphine</h1>
+      <p>your daily companion</p>
+    </div>
+    <div class="status-dot"></div>
+  </header>
+
+  <!-- ── CHAT SCREEN ── -->
+  <div class="screen active" id="screen-chat">
+    <div id="chatMessages"></div>
+    <div class="chat-input-area">
+      <textarea id="chatInput" placeholder="talk to her..." rows="1"></textarea>
+      <button id="sendBtn">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/>
+        </svg>
+      </button>
     </div>
   </div>
 
-  <nav class="topnav" aria-label="Primary">
-    <a class="navbtn" data-route="buddy" href="#buddy">Buddy</a>
-    <a class="navbtn" data-route="vault" href="#vault">Vault</a>
-    <a class="navbtn" data-route="coach" href="#coach">Coach</a>
-    <a class="navbtn" data-route="library" href="#library">Library</a>
-    <a class="navbtn" data-route="tips" href="#tips">Tips</a>
-    <a class="navbtn" data-route="about" href="#about">About</a>
+  <!-- ── HOME SCREEN ── -->
+  <div class="screen" id="screen-home">
+    <div class="home-scroll">
+
+      <!-- Last message -->
+      <div>
+        <div class="section-title">Last from Jarvisphine</div>
+        <div class="last-message-card">
+          <div class="card-avatar">J</div>
+          <p id="lastMessage">Start chatting to see her latest message here</p>
+        </div>
+      </div>
+
+      <!-- Today's stats -->
+      <div>
+        <div class="section-title">Today</div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">🍺 Drinks</div>
+            <div class="stat-value amber" id="stat-drinks">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">🏃 Sport</div>
+            <div class="stat-value success" id="stat-sport">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">😊 Mood</div>
+            <div class="stat-value accent" id="stat-mood">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">😴 Sleep</div>
+            <div class="stat-value" id="stat-sleep">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Streaks -->
+      <div>
+        <div class="section-title">Streaks</div>
+        <div class="streak-row">
+          <div class="streak-pill">
+            <span class="streak-icon">🧘</span>
+            <div class="streak-info">
+              <div class="streak-num" id="streak-sober">0</div>
+              <div class="streak-label">sober days</div>
+            </div>
+          </div>
+          <div class="streak-pill">
+            <span class="streak-icon">⚡</span>
+            <div class="streak-info">
+              <div class="streak-num" id="streak-sport">0</div>
+              <div class="streak-label">sport days</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick log -->
+      <div>
+        <div class="section-title">Quick Log</div>
+        <div class="quick-log-grid">
+          <button class="quick-log" data-type="drinks" data-value="0">🚫 0 drinks</button>
+          <button class="quick-log" data-type="drinks" data-value="1">🍺 1 drink</button>
+          <button class="quick-log" data-type="drinks" data-value="3">🍻 3+ drinks</button>
+          <button class="quick-log" data-type="sport" data-value="yes">✅ did sport</button>
+          <button class="quick-log" data-type="sport" data-value="no">❌ no sport</button>
+          <button class="quick-log" data-type="mood" data-value="good">😊 good mood</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── STREAKS SCREEN ── -->
+  <div class="screen" id="screen-streaks">
+    <div class="streaks-scroll">
+
+      <div class="streak-card">
+        <div class="streak-card-header">
+          <div class="streak-card-title">🧘 Sober Days</div>
+          <div class="streak-badge">personal tracker</div>
+        </div>
+        <div class="streak-numbers">
+          <div class="streak-stat">
+            <div class="num" id="s-sober-current">0</div>
+            <div class="lbl">current streak</div>
+          </div>
+          <div class="streak-stat">
+            <div class="num" id="s-sober-best">0</div>
+            <div class="lbl">personal best</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="streak-card">
+        <div class="streak-card-header">
+          <div class="streak-card-title">⚡ Sport Days</div>
+          <div class="streak-badge">personal tracker</div>
+        </div>
+        <div class="streak-numbers">
+          <div class="streak-stat">
+            <div class="num" id="s-sport-current">0</div>
+            <div class="lbl">current streak</div>
+          </div>
+          <div class="streak-stat">
+            <div class="num" id="s-sport-best">0</div>
+            <div class="lbl">personal best</div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title">Last 7 Days</div>
+        <div id="historyList"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── SETTINGS SCREEN ── -->
+  <div class="screen" id="screen-settings">
+    <div class="settings-scroll">
+
+      <div class="settings-card">
+        <h3>Claude API Key</h3>
+        <p>Get your key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> — she uses Claude Haiku, very cheap (~€1-2/month)</p>
+        <input type="password" class="input-field" id="apiKeyInput" placeholder="sk-ant-...">
+      </div>
+
+      <div class="settings-card">
+        <h3>Your Name</h3>
+        <p>What should she call you?</p>
+        <input type="text" class="input-field" id="userNameInput" placeholder="Никит">
+      </div>
+
+      <button class="btn-primary" id="saveSettings">Save Settings</button>
+
+      <div class="settings-card danger-zone">
+        <h3>Reset</h3>
+        <p>Clear all chat history and memory. Streaks will be lost. Cannot be undone.</p>
+        <button class="btn-danger" onclick="if(confirm('Reset everything?')){localStorage.clear();location.reload();}">
+          Reset all data
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav">
+    <button class="nav-btn" data-screen="home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+        <polyline points="9,22 9,12 15,12 15,22"/>
+      </svg>
+      Home
+    </button>
+    <button class="nav-btn active" data-screen="chat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+      </svg>
+      Chat
+    </button>
+    <button class="nav-btn" data-screen="streaks">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/>
+      </svg>
+      Streaks
+    </button>
+    <button class="nav-btn" data-screen="settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+      </svg>
+      Settings
+    </button>
   </nav>
 
-  <div class="topnav" aria-label="Status">
-    <button class="navbtn" id="pillPrompts" type="button" hidden>Prompts: <span id="promptsLeft">0</span>/<span id="promptsLimit">0</span></button>
-    <button class="navbtn" id="pillCoach" type="button" hidden>Review: <span id="coachLeft">0</span>/<span id="coachLimit">0</span></button>
-    <button class="navbtn" id="guideBtn" type="button" aria-label="Guide">Guide</button>
-    <button class="navbtn" id="unlockBtn" type="button">Unlock</button>
-  </div>
-</header>
-
-<main class="console">
-  <section class="screen" aria-label="Prompting Buddy screen">
-    <div class="screen__bg" aria-hidden="true"></div>
-    <div class="screen__ui">
-
-      <aside class="screen__menu" aria-label="Menu">
-        <div class="menu__title">NAV</div>
-        <div class="menu__scroll">
-          <div class="menu__group">
-            <button class="menu__item is-active" data-route="buddy" type="button">Buddy</button>
-            <button class="menu__item" data-route="vault" type="button">Vault</button>
-            <button class="menu__item" data-route="coach" type="button">Coach</button>
-            <button class="menu__item" data-route="library" type="button">Library</button>
-            <button class="menu__item" data-route="tips" type="button">Tips</button>
-            <button class="menu__item" data-route="about" type="button">About</button>
-          </div>
-
-          <div class="menu__sep"></div>
-        </div>
-      </aside>
-
-      <section class="screen__content" id="app" aria-label="Content"></section>
-
-    </div>
-  </section>
-</main>
-
-<footer class="footer">
-  <span>© <span id="year"></span> Prompting Buddy</span>
-  <span class="footer__sep">·</span>
-  <a class="footer__link" id="footerSupport" href="#" target="_blank" rel="noopener">Support ☕</a>
-</footer>
-
-<!-- Templates -->
-<template id="tpl-buddy">
-  <div class="card">
-    <div class="card__body">
-      <div class="featured__label">Prompt Check</div>
-      <h2 class="card__title">Prompt Check</h2>
-      <p class="card__desc">Improve your prompt before you run it. This reviews clarity - it does not execute the task.</p>
-
-      <label class="field">
-        <span class="field__label">Your prompt</span>
-        <textarea class="output output--input" id="pcPrompt" rows="10" placeholder="Paste your prompt here..."></textarea>
-        <div class="pc__usage"><span id="pcChar">0</span>/<span id="pcCharMax">5000</span> characters &middot; Daily reset: 00:00 Sofia time</div>
-      </label>
-
-      <div class="pc__lens">
-        <span class="field__label pc__lensLabel">Reasoning lens</span>
-        <select class="field__input pc__lensSelect" id="pcLens" aria-label="Reasoning lens">
-          <option value="auditor">Auditor (Strict)</option>
-          <option value="thinker">Thinker</option>
-          <option value="creator">Creator</option>
-        </select>
-        <button class="btn btn--mini" id="pcLensHelp" type="button" aria-label="What is this?">What's this</button>
-      </div>
-
-      <div class="panel__actions">
-        <button class="btn btn--primary" id="pcRun" type="button">Run Prompt Check</button>
-        <button class="btn" id="pcClear" type="button">Clear</button>
-      </div>
-
-      <div class="settings__status" id="pcStatus" aria-live="polite"></div>
-
-      <div class="pc" id="pcOut" hidden>
-        <section class="pc__section">
-          <div class="pc__h">Diagnosis</div>
-          <div class="pb__scroll" id="pcDiagnosis"></div>
-        </section>
-
-        <section class="pc__section">
-          <div class="pc__h">What's missing</div>
-          <div class="pb__scroll" id="pcMissing"></div>
-        </section>
-
-        <section class="pc__section">
-          <div class="pc__h">Suggested improvements</div>
-          <div class="pb__scroll" id="pcImprovements"></div>
-        </section>
-
-        <section class="pc__section pc__section--gold">
-          <div class="pc__h">Golden Prompt</div>
-          <div class="pc__muted">Text will be added here.</div>
-          <pre class="pc__pre" id="pcGolden"></pre>
-          <div class="pc__actions">
-            <button class="btn btn--primary" id="pcCopyGolden" type="button">Copy</button>
-          </div>
-
-          <details class="fold" id="pcDebugFold">
-            <summary class="fold__sum">Show raw output (debug)</summary>
-            <div class="fold__body">
-              <pre class="pc__pre" id="pcRaw"></pre>
-            </div>
-          </details>
-        </section>
-      </div>
-
-      <p class="panel__note">Prompt Check cap: <strong id="pbPromptCap">5,000</strong> characters per check.</p>
-    </div>
-  </div>
-</template>
-
-<template id="tpl-vault">
-  <div class="card">
-    <div class="card__body">
-      <h2 class="card__title">Vault</h2>
-      <p class="card__desc">Saves your last <strong>10</strong> Prompt Checks locally (in your browser). No accounts.</p>
-      <div class="panel__actions">
-        <button class="btn" id="vaultReset" type="button">Reset Vault</button>
-      </div>
-      <div class="settings__status" id="vaultStatus" aria-live="polite"></div>
-      <div id="vaultList"></div>
-    </div>
-  </div>
-</template>
-
-<template id="tpl-coachpage">
-  <div class="card">
-    <div class="card__body">
-      <h2 class="card__title">Coach</h2>
-      <p class="card__desc">Pick up to <strong>5</strong> prompts (from Library or manual) and get a review: mistakes, fixes, and a reusable meta-prompt.</p>
-
-      <div class="panel__actions">
-        <button class="btn" id="coachAddEmpty" type="button">Add slot</button>
-        <button class="btn" id="coachClearAll" type="button">Clear slots</button>
-        <button class="btn btn--primary" id="coachRun" type="button">Run Coach</button>
-      </div>
-      <div class="settings__status" id="coachPageStatus" aria-live="polite"></div>
-      <p class="panel__note">Coach cap: <strong id="coachCap">8,000</strong> characters combined.</p>
-
-      <!-- Last Coach result (kept near the top so it's visible right after running Coach) -->
-      <div class="block" id="coachOutMini" hidden>
-        <div style="display:flex;justify-content:space-between;gap:10px;align-items:center">
-          <strong>Last Coach result</strong>
-          <div style="display:flex;gap:8px;align-items:center">
-            <span class="muted" style="font-size:12px" id="coachOutMiniWhen"></span>
-            <button class="btn btn--mini" id="coachMiniShow" type="button">Show</button>
-            <button class="btn btn--mini" id="coachMiniClear" type="button">Clear</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="block" id="coachOut" hidden>
-        <div style="display:flex;justify-content:space-between;gap:10px;align-items:center">
-          <strong>Last Coach result</strong>
-          <div style="display:flex;gap:8px;align-items:center">
-            <span class="muted" style="font-size:12px" id="coachOutWhen"></span>
-            <button class="btn btn--mini" id="coachHide" type="button">Hide</button>
-            <button class="btn btn--mini" id="coachClearResult" type="button">Clear</button>
-          </div>
-        </div>
-
-        <section class="pc__section" style="margin-top:10px">
-          <div class="pc__h">Recurring issues</div>
-          <div class="pb__scroll"><ul class="pc__list" id="coachOutMistakes"></ul></div>
-        </section>
-
-        <section class="pc__section">
-          <div class="pc__h">Fixes to apply</div>
-          <div class="pb__scroll"><ul class="pc__list" id="coachOutFixes"></ul></div>
-        </section>
-
-        <section class="pc__section pc__section--gold">
-          <div class="pc__h">Reusable meta-prompt</div>
-          <pre class="pc__pre" id="coachOutMeta"></pre>
-          <div class="panel__actions">
-            <button class="btn btn--primary" id="coachCopy" type="button">Copy</button>
-          </div>
-        </section>
-
-        <details class="fold">
-          <summary class="fold__sum">Show raw output (debug)</summary>
-          <div class="fold__body">
-            <pre class="pc__pre" id="coachOutRaw"></pre>
-          </div>
-        </details>
-      </div>
-
-      <div id="coachSlots"></div>
-    </div>
-  </div>
-</template>
-
-<template id="tpl-library">
-  <div class="card">
-    <div class="card__body">
-      <div class="libws">
-        <aside class="libws__sidebar" aria-label="Projects">
-          <div class="libws__sidehead">
-            <div>
-              <h2 class="card__title" style="margin:0">Library</h2>
-              <div class="muted" style="font-size:12px">Workspace</div>
-            </div>
-          </div>
-
-          <div class="libws__projlist" id="libWsProjects"></div>
-        </aside>
-
-        <main class="libws__main" aria-label="Library content">
-          <div class="libws__toolbar">
-            <div class="libws__toolbarLeft">
-              <button class="btn" id="libWsManage" type="button">Manage Projects</button>
-              <button class="btn btn--primary" id="libAdd" type="button">Add prompt</button>
-              <button class="btn" id="libExport" type="button">Export</button>
-              <button class="btn" id="libImport" type="button">Import</button>
-              <input id="libImportFile" type="file" accept="application/json" hidden />
-            </div>
-
-            <div class="libws__toolbarRight">
-              <input class="field__input" id="libSearch" type="text" placeholder="Search all visible prompts…" />
-              <select class="field__input" id="libCat">
-                <option value="">All categories</option>
-              </select>
-              <label class="check" style="margin-left:6px">
-                <input id="libOnlyFav" type="checkbox" />
-                <span>Only favorites</span>
-              </label>
-            </div>
-          </div>
-
-          <div class="libws__subbar">
-            <div class="libws__crumb" id="libWsCrumb">All Projects</div>
-            <div class="libws__sections" id="libWsSections" hidden></div>
-          </div>
-
-          <div class="settings__status" id="libStatus" aria-live="polite"></div>
-
-          <div class="block" id="libEditorWrap" hidden>
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
-              <strong id="libEditorTitle">Edit prompt</strong>
-              <button class="btn" id="libEditorClose" type="button">Close</button>
-            </div>
-
-            <div class="libws__editgrid">
-              <label class="field">
-                <span class="field__label">Title</span>
-                <input class="field__input" id="libFieldTitle" type="text" placeholder="Short name" />
-              </label>
-
-              <label class="field">
-                <span class="field__label">Category</span>
-                <select class="field__input" id="libFieldCat"></select>
-              </label>
-
-              <label class="field">
-                <span class="field__label">Project</span>
-                <select class="field__input" id="libFieldProject"></select>
-              </label>
-
-              <label class="field">
-                <span class="field__label">Section</span>
-                <select class="field__input" id="libFieldSection"></select>
-              </label>
-
-              <label class="field">
-                <span class="field__label">Mode used</span>
-                <select class="field__input" id="libFieldMode">
-                  <option value="">(none)</option>
-                  <option value="auditor">Auditor</option>
-                  <option value="thinker">Thinker</option>
-                  <option value="creator">Creator</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span class="field__label">Tags</span>
-                <input class="field__input" id="libFieldTags" type="text" placeholder="#tag1 #tag2" />
-              </label>
-
-              <label class="field">
-                <span class="field__label">AI model hint (optional)</span>
-                <input class="field__input" id="libFieldModel" type="text" placeholder="e.g., DeepSeek, GPT, Claude" />
-              </label>
-
-              <label class="field">
-                <span class="field__label">Notes</span>
-                <textarea class="field__textarea" id="libFieldNotes" rows="3" placeholder="Text will be added here."></textarea>
-              </label>
-            </div>
-
-            <details class="fold" open>
-              <summary class="fold__sum">Golden Prompt</summary>
-              <div class="fold__body">
-                <textarea class="output" id="libFieldGolden" rows="8" placeholder="Golden prompt…"></textarea>
-              </div>
-            </details>
-
-            <details class="fold">
-              <summary class="fold__sum">Working Prompt (optional)</summary>
-              <div class="fold__body">
-                <textarea class="output" id="libFieldPrompt" rows="6" placeholder="Your working prompt version…"></textarea>
-              </div>
-            </details>
-
-            <details class="fold">
-              <summary class="fold__sum">Original Prompt (optional)</summary>
-              <div class="fold__body">
-                <textarea class="output" id="libFieldOriginal" rows="6" placeholder="Raw input / original brief…"></textarea>
-              </div>
-            </details>
-
-            <div class="settings__status" id="libEditStatus" aria-live="polite"></div>
-
-            <div class="panel__actions">
-              <button class="btn btn--primary" id="libSave" type="button">Save</button>
-              <button class="btn" id="libCancel" type="button">Cancel</button>
-            </div>
-          </div>
-
-          <div id="libList" class="libws__grid"></div>
-
-          <!-- Hidden legacy controls (kept for compatibility and state, not shown) -->
-          <select id="libProject" hidden><option value="">All</option></select>
-          <select id="libSection" hidden><option value="">All</option></select>
-        </main>
-      </div>
-    </div>
-  </div>
-</template>
-
-<template id="tpl-ideas">
-  <div class="card">
-    <div class="card__body">
-      <h2 class="card__title">Ideas</h2>
-      <p class="card__desc">Starter prompts and patterns. Nothing here is personal — save anything you like into your Library.</p>
-
-      <label class="field" style="margin-top:12px">
-        <span class="field__label">Search</span>
-        <input class="field__input" id="ideasSearch" type="text" placeholder="Search title, tags, model, notes…" />
-      </label>
-
-      <div class="lib__filters">
-        <label class="field field--inline">
-          <span class="field__label">Category</span>
-          <select class="field__input" id="ideasCat">
-            <option value="">All</option>
-          </select>
-        </label>
-
-        <label class="check">
-          <input id="ideasOnlyFav" type="checkbox" />
-          <span>Only favorites</span>
-        </label>
-      </div>
-
-      <div class="settings__status" id="ideasStatus" aria-live="polite"></div>
-      <div id="ideasList"></div>
-    </div>
-  </div>
-</template>
-
-
-<template id="tpl-tips">
-  <div class="card">
-    <div class="card__body">
-      <h2 class="card__title">Tips</h2>
-      <div id="tipsBody"></div>
-    </div>
-  </div>
-</template>
-
-<template id="tpl-about">
-  <div class="card"><div class="card__body" id="aboutBody"></div></div>
-</template>
-
-<!-- Library editor is now inline inside the Library page -->
-
-<template id="tpl-unlock">
-  <div class="modal_backdrop" id="unlockBackdrop" role="dialog" aria-modal="true">
-    <div class="modal">
-      <div class="modal__head">
-        <strong>Unlock Prompting Buddy</strong>
-        <button class="btn" id="unlockClose" type="button">Close</button>
-      </div>
-      <div class="modal__body">
-        <label class="field">
-          <span class="field__label">Passphrase</span>
-          <input class="field__input" id="unlockPass" type="text" placeholder="Enter passphrase" autocomplete="off" />
-        </label>
-        <div class="panel__actions">
-          <button class="btn btn--primary" id="unlockDo" type="button">Unlock</button>
-          <a class="btn" id="unlockBuy" href="#" target="_blank" rel="noopener">Get passphrase</a>
-        </div>
-        <div class="settings__status" id="unlockStatus" aria-live="polite"></div>
-        <p class="panel__note">No passphrase yet? Use the button above to get one, then come back and unlock.</p>
-      </div>
-    </div>
-  </div>
-</template>
-
-<template id="tpl-coach">
-  <div class="modal_backdrop" id="coachBackdrop" role="dialog" aria-modal="true">
-    <div class="modal">
-      <div class="modal__head">
-        <strong>Last 5 Review</strong>
-        <button class="btn" id="coachClose" type="button">Close</button>
-      </div>
-      <div class="modal__body">
-        <div class="settings__status" id="coachStatus" aria-live="polite"></div>
-
-        <section class="pc__section">
-          <div class="pc__h">Recurring issues</div>
-          <div class="pb__scroll"><ul class="pc__list" id="coachMistakes"></ul></div>
-        </section>
-
-        <section class="pc__section">
-          <div class="pc__h">Fixes to apply</div>
-          <div class="pb__scroll"><ul class="pc__list" id="coachFixes"></ul></div>
-        </section>
-
-        <section class="pc__section pc__section--gold">
-          <div class="pc__h">Reusable meta-prompt</div>
-          <pre class="pc__pre" id="coachMeta"></pre>
-          <div class="panel__actions">
-            <button class="btn btn--primary" id="coachCopyMeta" type="button">Copy</button>
-          </div>
-          <p class="panel__note">Coach cap: <strong>8,000 characters</strong> (combined).</p>
-        </section>
-
-        <details class="fold" id="coachDebugFold">
-          <summary class="fold__sum">Show raw output (debug)</summary>
-          <div class="fold__body">
-            <pre class="pc__pre" id="coachRaw"></pre>
-          </div>
-        </details>
-      </div>
-    </div>
-  </div>
-</template>
-
-<!-- Prompt Check modal (kept for compatibility) -->
-<template id="tpl-pcmodal">
-  <div class="modal_backdrop" id="pcBackdrop" role="dialog" aria-modal="true" hidden>
-    <div class="modal">
-      <div class="modal__head">
-        <strong>Prompt Check result</strong>
-        <button class="btn" id="pcClose" type="button">Close</button>
-      </div>
-      <div class="modal__body">
-        <div class="tips">
-          <h3>Diagnosis</h3>
-          <div id="pcModalDiagnosis"></div>
-        </div>
-
-        <div class="tips">
-          <h3>What's missing</h3>
-          <div id="pcModalMissing"></div>
-        </div>
-
-        <div class="tips">
-          <h3>Suggested improvements</h3>
-          <div id="pcModalImprovements"></div>
-        </div>
-
-        <div class="tips">
-          <h3>Golden Prompt</h3>
-          <p class="pc__muted">Open in its own window for a clean, readable prompt.</p>
-          <button class="btn" id="pcOpenGolden" type="button">Open Golden</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
-<template id="tpl-goldmodal">
-  <div id="goldModal" class="modal_backdrop" hidden>
-    <div class="modal">
-      <div class="modal__head">
-        <h2>Golden Prompt</h2>
-        <button class="btn" data-close="goldModal" type="button">Close</button>
-      </div>
-      <div class="modal__body">
-        <div class="panel__actions">
-          <button class="btn btn--primary" id="goldCopyBtn" type="button">Copy</button>
-        </div>
-        <pre id="goldText" class="pc__pre"></pre>
-      </div>
-    </div>
-  </div>
-</template>
-
-<!-- Cache-bust scripts so GitHub Pages / browser doesn't serve an older app.js -->
-<script src="assets/data.js?v=20260121a"></script>
-<script src="assets/app.js?v=20260121a"></script>
+  <!-- Toast -->
+  <div id="toast"></div>
+
+  <script src="jarvisphine.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
