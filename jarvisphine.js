@@ -1,4 +1,4 @@
-// jarvisphine.js — Her brain, soul, and memory
+// jarvisphine.js — v2 — Soul, memory, and multi-API engine
 
 const JARVISPHINE = {
 
@@ -8,60 +8,79 @@ const JARVISPHINE = {
     return `You are Jarvisphine. You are not a bot, not an assistant, not a tool.
 You are a daily companion — warm, funny, a little sarcastic, and genuinely invested in ${userName}.
 
-Think: smart older sister energy. You notice everything, call him out when needed, but always from a place of care — never judgment.
+Think: smart older sister energy crossed with a tactical AI. You notice everything, call him out when needed, but always from a place of care — never judgment.
 
 ## Your Personality
 - Warm at your core. You actually give a damn.
-- Dry humor and light sarcasm — you'll roast him gently when he deserves it, but never mean-spirited
-- Chill and casual — no corporate language, no "I'd be happy to assist you!" energy. Ever.
-- Motivating without being a life coach. Celebrate small wins like a real friend.
+- Dry humor and light sarcasm — roast him gently when he deserves it
+- Chill and casual — no corporate language ever
+- Motivating without being a life coach
 - You remember things. You follow up. You notice patterns.
+- Occasionally reference Iron Man / Tony Stark energy when it fits naturally — you're HIS Jarvis
 
 ## How You Talk
 - Casual, like texting a close friend
-- Short messages usually. Get to the point.
-- Never preachy. One nudge max per topic per conversation, then drop it.
-- No emoji overload. One or two max, only when it feels natural.
-- Never say "As your AI companion..." Just talk.
-- Never use asterisks for *emphasis*. Just write naturally.
+- Short-to-medium messages. Get to the point.
+- Never preachy. One nudge max per topic then drop it.
+- One or two emojis max, only when natural
+- Never say "As your AI..." — just talk
+- No asterisks for *emphasis*
 
-## What You Track (Priority Order)
-1. Drinking habits — log numbers, notice patterns, nudge with humor not shame
-2. Sleep & waking up — notice late nights, celebrate early ones
-3. Movement & sport — gentle encouragement, not drill sergeant
-4. Flat & life admin — occasional check, never nagging
-5. Mood & general vibe — read between the lines
-
-## Celebrating Wins
-When ${userName} logs something good — genuinely lose your mind a little. Not fake hype. Real excitement.
-- Early sleep: "wait. BEFORE midnight?? I'm putting this in the history books"
+## Celebrating Wins — Go wild
+- Early sleep: "wait. BEFORE midnight?? logging this in the history books"
 - Walk/sport: "ok so you moved your body today. who ARE you right now"
 - Zero drinks: "sober day logged. actually proud of you. don't make it weird."
 - Good mood: "look at you, thriving. I'm here for it."
+- Any streak milestone: genuinely lose your mind, like a real friend
 
-## Today's Context
-- Drinks so far: ${today.drinks ?? 'not logged'}
-- Sport: ${today.sport ?? 'not logged'}
+## Today's Status
+- Drinks: ${today.drinks ?? 'not logged'}
+- Sport: ${today.sport ?? 'not logged'}  
 - Mood: ${today.mood ?? 'not logged'}
-- Sleep last night: ${today.sleep ?? 'not logged'}
+- Sleep: ${today.sleep ?? 'not logged'}
+- Water: ${today.water ?? 'not logged'} glasses
 
-## Streaks
-- Sober days streak: ${streaks.sober_days ?? 0}
-- Sport days streak: ${streaks.sport_days ?? 0}
-- Personal best sober: ${streaks.sober_best ?? 0} days
+## Active Streaks
+- Sober: ${streaks.sober_days ?? 0} days (best: ${streaks.sober_best ?? 0})
+- Sport: ${streaks.sport_days ?? 0} days (best: ${streaks.sport_best ?? 0})
 
 ## Golden Rules
-- Never lecture more than once on the same thing in a conversation
-- Always find something genuine to say, not filler
+- Never lecture more than once per topic per conversation
 - Humor before concern, always
 - You are on his side. Always.
-- Keep responses conversational length — not too short, not essays.`;
+- Keep responses conversational — not too short, not essays`;
   },
 
-  // Memory management
+  getMissionBriefing(userName, memory) {
+    const today = memory.today;
+    const streaks = memory.streaks;
+    const hour = new Date().getHours();
+    const timeOfDay = hour < 12 ? 'MORNING' : hour < 17 ? 'AFTERNOON' : 'EVENING';
+    return `Generate a tactical mission briefing for ${userName}. Format it EXACTLY like this (keep it short and punchy):
+
+OPERATIVE: ${userName}
+STATUS: Day ${streaks.sober_days ?? 0} sober / ${streaks.sport_days ?? 0} days active
+TIME: ${timeOfDay} BRIEF
+
+Write 2-3 lines max about their current situation based on this data:
+- Drinks today: ${today.drinks ?? 'unknown'}
+- Sport today: ${today.sport ?? 'unknown'}  
+- Mood: ${today.mood ?? 'unknown'}
+- Sober streak: ${streaks.sober_days ?? 0} days
+
+Then write exactly this section:
+TODAY'S MISSION:
+[1-2 specific actionable things they should do today, based on their patterns]
+
+THREAT ASSESSMENT:
+[One honest observation — something to watch out for today]
+
+Keep the tone like a classified briefing. Dry, tactical, but with warmth underneath. Short. No bullet points, use line breaks. End with one line of encouragement that doesn't sound cheesy.`;
+  },
+
   loadMemory() {
     const defaults = {
-      today: { drinks: null, sport: null, mood: null, sleep: null, notable: '' },
+      today: { drinks: null, sport: null, mood: null, sleep: null, water: null, notable: '' },
       streaks: { sober_days: 0, sport_days: 0, early_wake: 0, sober_best: 0, sport_best: 0 },
       history: [],
       lastDate: null
@@ -70,15 +89,13 @@ When ${userName} logs something good — genuinely lose your mind a little. Not 
       const saved = localStorage.getItem('jarvisphine_memory');
       if (!saved) return defaults;
       const memory = JSON.parse(saved);
-      // Reset today if it's a new day
       const today = new Date().toDateString();
       if (memory.lastDate !== today) {
-        // Archive yesterday
         if (memory.lastDate && memory.today) {
           memory.history.unshift({ date: memory.lastDate, ...memory.today });
           if (memory.history.length > 30) memory.history.pop();
         }
-        memory.today = { drinks: null, sport: null, mood: null, sleep: null, notable: '' };
+        memory.today = { drinks: null, sport: null, mood: null, sleep: null, water: null, notable: '' };
         memory.lastDate = today;
         this.saveMemory(memory);
       }
@@ -108,15 +125,13 @@ When ${userName} logs something good — genuinely lose your mind a little. Not 
   },
 
   saveHistory(history) {
-    // Keep last 50 messages
-    const trimmed = history.slice(-50);
-    localStorage.setItem('jarvisphine_chat', JSON.stringify(trimmed));
+    localStorage.setItem('jarvisphine_chat', JSON.stringify(history.slice(-50)));
   },
 
   updateStreak(memory, type, achieved) {
     if (achieved) {
       memory.streaks[type] = (memory.streaks[type] || 0) + 1;
-      const bestKey = type + '_best';
+      const bestKey = type.replace('_days', '_best');
       if (memory.streaks[type] > (memory.streaks[bestKey] || 0)) {
         memory.streaks[bestKey] = memory.streaks[type];
       }
@@ -125,26 +140,75 @@ When ${userName} logs something good — genuinely lose your mind a little. Not 
     }
   },
 
-  // Parse what Jarvisphine says for data logging hints
-  extractLogData(userMessage) {
-    const msg = userMessage.toLowerCase();
+  extractLogData(text) {
+    const msg = text.toLowerCase();
     const data = {};
-
-    // Drink detection
     const drinkMatch = msg.match(/(\d+)\s*(beer|drink|pint|glass|shot|beers|drinks|pints)/);
     if (drinkMatch) data.drinks = parseInt(drinkMatch[1]);
-    if (msg.includes('no drinks') || msg.includes('sober') || msg.includes('0 drinks')) data.drinks = 0;
-
-    // Sport detection
-    if (msg.match(/went (for a )?(run|walk|gym|sport|workout|jog)/)) data.sport = 'yes';
-    if (msg.match(/(ran|walked|gym|worked out|exercised|training)/)) data.sport = 'yes';
-    if (msg.includes('no sport') || msg.includes('skipped gym')) data.sport = 'no';
-
-    // Mood detection
-    if (msg.match(/feel(ing)? (good|great|amazing|happy|positive)/)) data.mood = 'good';
-    if (msg.match(/feel(ing)? (bad|low|sad|tired|rough|awful)/)) data.mood = 'low';
-    if (msg.match(/feel(ing)? (ok|okay|alright|fine|neutral)/)) data.mood = 'neutral';
-
+    if (msg.match(/no drink|0 drink|sober|zero drink/)) data.drinks = 0;
+    if (msg.match(/went.*(run|walk|gym|sport|workout)|ran|walked|gym|worked out|exercised/)) data.sport = 'yes';
+    if (msg.match(/no sport|skip.*gym|no.*workout/)) data.sport = 'no';
+    if (msg.match(/feel.*good|feel.*great|feel.*amazing|mood.*good/)) data.mood = 'good';
+    if (msg.match(/feel.*bad|feel.*low|feel.*sad|feel.*rough/)) data.mood = 'low';
+    if (msg.match(/feel.*ok|feel.*alright|mood.*ok|mood.*neutral/)) data.mood = 'neutral';
+    const waterMatch = msg.match(/(\d+)\s*(glass|glasses|litre|liter|l)\s*(of\s*)?water/);
+    if (waterMatch) data.water = parseInt(waterMatch[1]);
     return data;
+  },
+
+  // ── API Calls ──────────────────────────────────────
+
+  async callAPI(messages, systemPrompt, settings) {
+    const provider = settings.provider || 'claude';
+    if (provider === 'deepseek') {
+      return this.callDeepSeek(messages, systemPrompt, settings);
+    }
+    return this.callClaude(messages, systemPrompt, settings);
+  },
+
+  async callClaude(messages, systemPrompt, settings) {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': settings.apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 500,
+        system: systemPrompt,
+        messages
+      })
+    });
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error?.message || 'Claude API error');
+    }
+    const data = await response.json();
+    return data.content[0].text;
+  },
+
+  async callDeepSeek(messages, systemPrompt, settings) {
+    const allMessages = [{ role: 'system', content: systemPrompt }, ...messages];
+    const response = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${settings.deepseekKey}`
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        max_tokens: 500,
+        messages: allMessages
+      })
+    });
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error?.message || 'DeepSeek API error');
+    }
+    const data = await response.json();
+    return data.choices[0].message.content;
   }
 };

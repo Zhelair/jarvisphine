@@ -1,10 +1,14 @@
-// app.js — UI logic and Claude API calls
+// app.js — v2 — Jarvisphine with voice, mission briefing, HUD
 
 let currentScreen = 'chat';
 let chatHistory = [];
 let memory = {};
 let settings = {};
 let isTyping = false;
+let isRecording = false;
+let mediaRecorder = null;
+let recognition = null;
+let briefingGenerated = false;
 
 // ── Init ──────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -12,53 +16,96 @@ document.addEventListener('DOMContentLoaded', () => {
   settings = JARVISPHINE.loadSettings();
   chatHistory = JARVISPHINE.loadHistory();
 
-  renderChat();
   renderHome();
   renderStreaks();
   renderSettings();
   showScreen('chat');
+  initVoice();
+  runHUDBootSequence();
 
-  // If no API key, go to settings first
-  if (!settings.apiKey) {
+  if (!settings.apiKey && !settings.deepseekKey) {
     showScreen('settings');
-    showToast('Add your Claude API key to get started 🔑');
+    showToast('SYSTEM: API key required to initialize 🔑');
   } else if (chatHistory.length === 0) {
-    // First ever open — Jarvisphine introduces herself
-    sendJarvisphineMessage("hey. I'm Jarvisphine. I'll be checking in on you daily — no lectures, just real talk. how's today going so far?");
+    setTimeout(() => {
+      sendJarvisphineMessage("systems online. hey — I'm Jarvisphine. I'll be checking in on you daily. no lectures, just real talk. how's today looking so far?");
+    }, 2000);
+  } else {
+    renderChat();
   }
 
-  // Nav clicks
   document.querySelectorAll('.nav-btn').forEach(btn => {
     btn.addEventListener('click', () => showScreen(btn.dataset.screen));
   });
 
-  // Chat input
   document.getElementById('chatInput').addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   });
+
   document.getElementById('sendBtn').addEventListener('click', sendMessage);
+  document.getElementById('saveSettings').addEventListener('click', saveSettingsFn);
+  document.getElementById('generateBriefing').addEventListener('click', generateMissionBriefing);
 
-  // Settings save
-  document.getElementById('saveSettings').addEventListener('click', saveSettings);
-
-  // Quick log buttons
   document.querySelectorAll('.quick-log').forEach(btn => {
     btn.addEventListener('click', () => quickLog(btn.dataset.type, btn.dataset.value));
   });
+
+  // Voice button
+  const voiceBtn = document.getElementById('voiceBtn');
+  voiceBtn.addEventListener('mousedown', startVoice);
+  voiceBtn.addEventListener('touchstart', e => { e.preventDefault(); startVoice(); });
+  voiceBtn.addEventListener('mouseup', stopVoice);
+  voiceBtn.addEventListener('mouseleave', stopVoice);
+  voiceBtn.addEventListener('touchend', stopVoice);
+
+  // Provider toggle
+  document.querySelectorAll('.provider-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.provider-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      settings.provider = btn.dataset.provider;
+      JARVISPHINE.saveSettings(settings);
+      updateProviderStatus();
+    });
+  });
 });
 
-// ── Screen Navigation ────────────────────────────────
+// ── HUD Boot Sequence ─────────────────────────────────
+function runHUDBootSequence() {
+  const lines = [
+    'INITIALIZING JARVISPHINE v2.0...',
+    'LOADING PERSONALITY MATRIX...',
+    'CONNECTING NEURAL INTERFACE...',
+    'COMPANION SYSTEMS ONLINE.'
+  ];
+  const el = document.getElementById('bootText');
+  if (!el) return;
+  let i = 0;
+  const interval = setInterval(() => {
+    el.textContent = lines[i];
+    i++;
+    if (i >= lines.length) {
+      clearInterval(interval);
+      setTimeout(() => {
+        const boot = document.getElementById('bootOverlay');
+        if (boot) boot.classList.add('hidden');
+      }, 800);
+    }
+  }, 500);
+}
+
+// ── Screen Navigation ─────────────────────────────────
 function showScreen(name) {
   currentScreen = name;
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('screen-' + name).classList.add('active');
-  document.querySelector(`.nav-btn[data-screen="${name}"]`).classList.add('active');
-  if (name === 'home') renderHome();
+  document.getElementById('screen-' + name)?.classList.add('active');
+  document.querySelector(`.nav-btn[data-screen="${name}"]`)?.classList.add('active');
+  if (name === 'home') { renderHome(); if (!briefingGenerated) generateMissionBriefing(); }
   if (name === 'streaks') renderStreaks();
 }
 
-// ── Chat ─────────────────────────────────────────────
+// ── Chat ──────────────────────────────────────────────
 function renderChat() {
   const container = document.getElementById('chatMessages');
   container.innerHTML = '';
@@ -70,20 +117,18 @@ function appendMessageToDOM(role, content) {
   const container = document.getElementById('chatMessages');
   const div = document.createElement('div');
   div.className = `message ${role === 'user' ? 'message-user' : 'message-jarvis'}`;
-
   if (role === 'assistant') {
     div.innerHTML = `<div class="avatar">J</div><div class="bubble">${content}</div>`;
   } else {
     div.innerHTML = `<div class="bubble">${content}</div>`;
   }
-
   container.appendChild(div);
   scrollToBottom();
 }
 
 function scrollToBottom() {
   const c = document.getElementById('chatMessages');
-  c.scrollTop = c.scrollHeight;
+  if (c) c.scrollTop = c.scrollHeight;
 }
 
 function showTypingIndicator() {
@@ -101,25 +146,29 @@ function removeTypingIndicator() {
   if (el) el.remove();
 }
 
-async function sendMessage() {
+async function sendMessage(overrideText) {
   if (isTyping) return;
   const input = document.getElementById('chatInput');
-  const text = input.value.trim();
+  const text = overrideText || input.value.trim();
   if (!text) return;
-  if (!settings.apiKey) { showToast('Add your API key in Settings first'); showScreen('settings'); return; }
+  if (!settings.apiKey && !settings.deepseekKey) {
+    showToast('SYSTEM ERROR: No API key detected');
+    showScreen('settings');
+    return;
+  }
 
   input.value = '';
   appendMessageToDOM('user', text);
   chatHistory.push({ role: 'user', content: text });
 
-  // Extract any logged data from message
   const logData = JARVISPHINE.extractLogData(text);
   if (Object.keys(logData).length > 0) {
     Object.assign(memory.today, logData);
-    // Update streaks
-    if (logData.drinks === 0) JARVISPHINE.updateStreak(memory, 'sober_days', true);
-    else if (logData.drinks > 0) JARVISPHINE.updateStreak(memory, 'sober_days', false);
+    if (typeof logData.drinks === 'number') {
+      JARVISPHINE.updateStreak(memory, 'sober_days', logData.drinks === 0);
+    }
     if (logData.sport === 'yes') JARVISPHINE.updateStreak(memory, 'sport_days', true);
+    if (logData.sport === 'no') JARVISPHINE.updateStreak(memory, 'sport_days', false);
     JARVISPHINE.saveMemory(memory);
     renderHome();
   }
@@ -128,15 +177,19 @@ async function sendMessage() {
   showTypingIndicator();
 
   try {
-    const response = await callClaudeAPI(text);
+    const systemPrompt = JARVISPHINE.getSystemPrompt(settings.userName || 'Никит', memory);
+    const messages = chatHistory.slice(-10).map(m => ({
+      role: m.role === 'assistant' ? 'assistant' : 'user',
+      content: m.content
+    }));
+    const response = await JARVISPHINE.callAPI(messages, systemPrompt, settings);
     removeTypingIndicator();
     sendJarvisphineMessage(response);
   } catch (err) {
     removeTypingIndicator();
-    sendJarvisphineMessage("ugh, something went wrong on my end. try again? (check your API key in settings if this keeps happening)");
+    sendJarvisphineMessage(`SYSTEM ERROR: ${err.message}. Check your API key in settings.`);
     console.error(err);
   }
-
   isTyping = false;
 }
 
@@ -144,116 +197,130 @@ function sendJarvisphineMessage(content) {
   appendMessageToDOM('assistant', content);
   chatHistory.push({ role: 'assistant', content });
   JARVISPHINE.saveHistory(chatHistory);
+  updateLastMessage(content);
 }
 
-async function callClaudeAPI(userMessage) {
-  const systemPrompt = JARVISPHINE.getSystemPrompt(settings.userName || 'Никит', memory);
+// ── Voice Input ───────────────────────────────────────
+function initVoice() {
+  if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SR();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
 
-  // Build messages array (last 10 for context)
-  const messages = chatHistory.slice(-10).map(m => ({
-    role: m.role === 'assistant' ? 'assistant' : 'user',
-    content: m.content
-  }));
+    recognition.onresult = (e) => {
+      const transcript = Array.from(e.results).map(r => r[0].transcript).join('');
+      document.getElementById('chatInput').value = transcript;
+      if (e.results[e.results.length - 1].isFinal) {
+        stopVoice();
+        setTimeout(() => sendMessage(), 300);
+      }
+    };
 
-  // Make sure last message is the current one
-  if (messages[messages.length - 1]?.content !== userMessage) {
-    messages.push({ role: 'user', content: userMessage });
+    recognition.onerror = () => { stopVoice(); showToast('Voice not recognized — try again'); };
+    recognition.onend = () => stopVoice();
   }
-
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': settings.apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 500,
-      system: systemPrompt,
-      messages
-    })
-  });
-
-  if (!response.ok) {
-    const err = await response.json();
-    throw new Error(err.error?.message || 'API error');
-  }
-
-  const data = await response.json();
-  return data.content[0].text;
 }
 
-// ── Quick Log Buttons ────────────────────────────────
+function startVoice() {
+  if (!recognition) { showToast('Voice not supported in this browser'); return; }
+  if (isRecording) return;
+  isRecording = true;
+  document.getElementById('voiceBtn').classList.add('recording');
+  recognition.start();
+  showToast('🎙️ Listening...');
+}
+
+function stopVoice() {
+  if (!isRecording) return;
+  isRecording = false;
+  document.getElementById('voiceBtn').classList.remove('recording');
+  if (recognition) { try { recognition.stop(); } catch(e) {} }
+}
+
+// ── Mission Briefing ──────────────────────────────────
+async function generateMissionBriefing() {
+  if (!settings.apiKey && !settings.deepseekKey) return;
+  const btn = document.getElementById('generateBriefing');
+  const briefingEl = document.getElementById('missionBriefingText');
+  btn.textContent = 'GENERATING...';
+  btn.disabled = true;
+  briefingEl.innerHTML = '<span class="scanning">SCANNING OPERATIVE DATA...</span>';
+
+  try {
+    const prompt = JARVISPHINE.getMissionBriefing(settings.userName || 'Никит', memory);
+    const messages = [{ role: 'user', content: prompt }];
+    const response = await JARVISPHINE.callAPI(messages, 'You are a tactical AI briefing system. Be concise and punchy.', settings);
+    briefingEl.innerHTML = response.replace(/\n/g, '<br>');
+    briefingGenerated = true;
+  } catch (err) {
+    briefingEl.textContent = 'BRIEFING UNAVAILABLE — check API connection';
+  }
+  btn.textContent = 'REFRESH BRIEFING';
+  btn.disabled = false;
+}
+
+// ── Quick Log ─────────────────────────────────────────
 function quickLog(type, value) {
-  const parsedValue = isNaN(value) ? value : parseInt(value);
-  memory.today[type] = parsedValue;
-
-  if (type === 'drinks') {
-    JARVISPHINE.updateStreak(memory, 'sober_days', parsedValue === 0);
-  }
-  if (type === 'sport') {
-    JARVISPHINE.updateStreak(memory, 'sport_days', value === 'yes');
-  }
-
+  const parsed = isNaN(value) ? value : parseInt(value);
+  memory.today[type] = parsed;
+  if (type === 'drinks') JARVISPHINE.updateStreak(memory, 'sober_days', parsed === 0);
+  if (type === 'sport') JARVISPHINE.updateStreak(memory, 'sport_days', value === 'yes');
   JARVISPHINE.saveMemory(memory);
   renderHome();
 
-  // Tell Jarvisphine in chat
-  const messages = {
-    'drinks-0': "logging 0 drinks today",
-    'drinks-1': "had 1 drink today",
-    'drinks-2': "had 2 drinks today",
-    'drinks-3': "had 3+ drinks today",
-    'sport-yes': "did sport today ✓",
-    'sport-no': "skipped sport today",
-    'mood-good': "mood: good today",
-    'mood-neutral': "mood: okay today",
-    'mood-low': "mood: low today"
+  const msgs = {
+    'drinks-0': "logged 0 drinks today", 'drinks-1': "had 1 drink",
+    'drinks-2': "had 2 drinks", 'drinks-3': "had 3+ drinks",
+    'sport-yes': "did sport today", 'sport-no': "skipped sport",
+    'mood-good': "mood is good today", 'mood-neutral': "mood is okay",
+    'mood-low': "mood is low today", 'water-2': "drank 2 glasses of water",
+    'water-6': "drank 6 glasses of water", 'water-8': "drank 8 glasses of water"
   };
-
   const key = `${type}-${value}`;
-  if (messages[key]) {
-    showScreen('chat');
-    document.getElementById('chatInput').value = messages[key];
-    sendMessage();
-  }
+  if (msgs[key]) { showScreen('chat'); sendMessage(msgs[key]); }
 }
 
-// ── Home Screen ──────────────────────────────────────
+// ── Home ──────────────────────────────────────────────
 function renderHome() {
   const today = memory.today || {};
   const streaks = memory.streaks || {};
 
-  document.getElementById('stat-drinks').textContent = today.drinks ?? '—';
-  document.getElementById('stat-sport').textContent = today.sport ?? '—';
-  document.getElementById('stat-mood').textContent = today.mood ?? '—';
-  document.getElementById('stat-sleep').textContent = today.sleep ?? '—';
-  document.getElementById('streak-sober').textContent = streaks.sober_days ?? 0;
-  document.getElementById('streak-sport').textContent = streaks.sport_days ?? 0;
-
-  const lastMsg = chatHistory.filter(m => m.role === 'assistant').slice(-1)[0];
-  if (lastMsg) {
-    document.getElementById('lastMessage').textContent = lastMsg.content.slice(0, 80) + (lastMsg.content.length > 80 ? '...' : '');
-  }
+  // Animate stat values
+  animateStat('stat-drinks', today.drinks ?? '—');
+  animateStat('stat-sport', today.sport ?? '—');
+  animateStat('stat-mood', today.mood ?? '—');
+  animateStat('stat-water', today.water != null ? today.water + ' gl' : '—');
+  animateStat('streak-sober', streaks.sober_days ?? 0);
+  animateStat('streak-sport', streaks.sport_days ?? 0);
 }
 
-// ── Streaks Screen ───────────────────────────────────
+function animateStat(id, value) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.add('updating');
+  setTimeout(() => { el.textContent = value; el.classList.remove('updating'); }, 150);
+}
+
+function updateLastMessage(content) {
+  const el = document.getElementById('lastMessage');
+  if (el) el.textContent = content.slice(0, 90) + (content.length > 90 ? '...' : '');
+}
+
+// ── Streaks ───────────────────────────────────────────
 function renderStreaks() {
   const streaks = memory.streaks || {};
   const history = memory.history || [];
-
   document.getElementById('s-sober-current').textContent = streaks.sober_days ?? 0;
   document.getElementById('s-sober-best').textContent = streaks.sober_best ?? 0;
   document.getElementById('s-sport-current').textContent = streaks.sport_days ?? 0;
   document.getElementById('s-sport-best').textContent = streaks.sport_best ?? 0;
 
-  // Last 7 days history
-  const histContainer = document.getElementById('historyList');
-  histContainer.innerHTML = '';
-  if (history.length === 0) {
-    histContainer.innerHTML = '<p class="empty-state">No history yet — check in daily and it builds up here</p>';
+  const container = document.getElementById('historyList');
+  container.innerHTML = '';
+  if (!history.length) {
+    container.innerHTML = '<p class="empty-state">// NO HISTORICAL DATA — check in daily to build your record</p>';
     return;
   }
   history.slice(0, 7).forEach(day => {
@@ -261,25 +328,39 @@ function renderStreaks() {
     div.className = 'history-row';
     div.innerHTML = `
       <span class="hist-date">${day.date}</span>
-      <span class="hist-stat">🍺 ${day.drinks ?? '—'}</span>
-      <span class="hist-stat">🏃 ${day.sport ?? '—'}</span>
-      <span class="hist-stat">😊 ${day.mood ?? '—'}</span>
+      <span class="hist-pill drinks">🍺 ${day.drinks ?? '—'}</span>
+      <span class="hist-pill sport">🏃 ${day.sport ?? '—'}</span>
+      <span class="hist-pill mood">😊 ${day.mood ?? '—'}</span>
     `;
-    histContainer.appendChild(div);
+    container.appendChild(div);
   });
 }
 
-// ── Settings ─────────────────────────────────────────
+// ── Settings ──────────────────────────────────────────
 function renderSettings() {
   document.getElementById('apiKeyInput').value = settings.apiKey || '';
+  document.getElementById('deepseekKeyInput').value = settings.deepseekKey || '';
   document.getElementById('userNameInput').value = settings.userName || '';
+  const provider = settings.provider || 'claude';
+  document.querySelectorAll('.provider-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.provider === provider);
+  });
+  updateProviderStatus();
 }
 
-function saveSettings() {
+function updateProviderStatus() {
+  const provider = settings.provider || 'claude';
+  const el = document.getElementById('providerStatus');
+  if (el) el.textContent = provider === 'deepseek' ? '// DEEPSEEK ACTIVE' : '// CLAUDE HAIKU ACTIVE';
+}
+
+function saveSettingsFn() {
   settings.apiKey = document.getElementById('apiKeyInput').value.trim();
+  settings.deepseekKey = document.getElementById('deepseekKeyInput').value.trim();
   settings.userName = document.getElementById('userNameInput').value.trim() || 'Никит';
   JARVISPHINE.saveSettings(settings);
-  showToast('Settings saved ✓');
+  updateProviderStatus();
+  showToast('SETTINGS SAVED ✓');
   showScreen('chat');
 }
 
