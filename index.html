@@ -3,247 +3,274 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <title>JARVISPHINE // v2.0</title>
+  <title>JARVISPHINE // v3.0</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-  <!-- Boot Overlay -->
-  <div id="bootOverlay">
-    <div class="boot-arc">
-      <div class="boot-arc-inner"></div>
-    </div>
-    <div id="bootText">INITIALIZING JARVISPHINE v2.0...</div>
+<!-- Boot -->
+<div id="bootOverlay">
+  <div class="boot-arc"><div class="boot-arc-inner"></div></div>
+  <div id="bootText">INITIALIZING JARVISPHINE v3.0...</div>
+</div>
+
+<!-- Neural Link Overlay -->
+<div id="neuralLink">
+  <button id="neuralLinkClose">✕ EXIT</button>
+  <div class="nl-header">
+    <div id="nlStatus">// HOLD MIC TO SPEAK</div>
   </div>
-
-  <!-- Header -->
-  <header class="header">
-    <div class="header-avatar">J</div>
-    <div class="header-info">
-      <h1>Jarvisphine</h1>
-      <p>companion system // online</p>
-    </div>
-    <div class="status-dot"></div>
-  </header>
-
-  <!-- ── CHAT SCREEN ── -->
-  <div class="screen active" id="screen-chat">
-    <div id="chatMessages"></div>
-    <div class="chat-input-area">
-      <button id="voiceBtn" title="Hold to speak">🎙️</button>
-      <textarea id="chatInput" placeholder="// transmit message..." rows="1"></textarea>
-      <button id="sendBtn">
-        <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
-      </button>
-    </div>
+  <div class="arc-reactor" id="nlArc">
+    <div class="arc-ring arc-ring-1"></div>
+    <div class="arc-ring arc-ring-2"></div>
+    <div class="arc-ring arc-ring-3"></div>
+    <div class="arc-core"></div>
   </div>
-
-  <!-- ── HOME SCREEN ── -->
-  <div class="screen" id="screen-home">
-    <div class="home-scroll">
-
-      <!-- Last transmission -->
-      <div class="hud-panel">
-        <div class="panel-label">Last Transmission</div>
-        <div class="last-message-card">
-          <div class="card-avatar">J</div>
-          <p id="lastMessage">// awaiting first contact</p>
-        </div>
-      </div>
-
-      <!-- Vitals -->
-      <div class="hud-panel">
-        <div class="panel-label">Operative Vitals</div>
-        <div class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-label">// Drinks</div>
-            <div class="stat-value gold" id="stat-drinks">—</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">// Sport</div>
-            <div class="stat-value green" id="stat-sport">—</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">// Mood</div>
-            <div class="stat-value" id="stat-mood">—</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">// Water</div>
-            <div class="stat-value" id="stat-water">—</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Streaks -->
-      <div class="hud-panel">
-        <div class="panel-label">Active Streaks</div>
-        <div class="streak-row">
-          <div class="streak-pill">
-            <span class="streak-icon">🧘</span>
-            <div class="streak-info">
-              <div class="streak-num" id="streak-sober">0</div>
-              <div class="streak-label">sober days</div>
-            </div>
-          </div>
-          <div class="streak-pill">
-            <span class="streak-icon">⚡</span>
-            <div class="streak-info">
-              <div class="streak-num" id="streak-sport">0</div>
-              <div class="streak-label">sport days</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Mission Briefing -->
-      <div class="mission-panel">
-        <div class="panel-label">Mission Briefing</div>
-        <div id="missionBriefingText">// press generate for today's tactical briefing</div>
-        <button class="btn-hud" id="generateBriefing">⚡ Generate Briefing</button>
-      </div>
-
-      <!-- Quick Log -->
-      <div class="hud-panel">
-        <div class="panel-label">Quick Log</div>
-        <div class="quick-log-grid">
-          <button class="quick-log" data-type="drinks" data-value="0">🚫 0 drinks</button>
-          <button class="quick-log" data-type="drinks" data-value="1">🍺 1 drink</button>
-          <button class="quick-log" data-type="drinks" data-value="3">🍻 3+ drinks</button>
-          <button class="quick-log" data-type="sport" data-value="yes">✅ sport done</button>
-          <button class="quick-log" data-type="sport" data-value="no">❌ no sport</button>
-          <button class="quick-log" data-type="mood" data-value="good">😊 good mood</button>
-          <button class="quick-log" data-type="water" data-value="2">💧 2 glasses</button>
-          <button class="quick-log" data-type="water" data-value="6">💧 6 glasses</button>
-          <button class="quick-log" data-type="water" data-value="8">💧 8 glasses</button>
-        </div>
-      </div>
-
-    </div>
+  <div class="nl-response-area">
+    <div id="nlTranscript"></div>
+    <div id="nlResponse"></div>
   </div>
+  <button id="nlMicBtn">🎙️</button>
+  <div class="nl-hint">HOLD TO SPEAK // RELEASE TO SEND</div>
+</div>
 
-  <!-- ── STREAKS SCREEN ── -->
-  <div class="screen" id="screen-streaks">
-    <div class="streaks-scroll">
-
-      <div class="streak-card">
-        <div class="streak-card-title">// Sober Protocol</div>
-        <div class="streak-numbers">
-          <div class="streak-stat">
-            <div class="num" id="s-sober-current">0</div>
-            <div class="lbl">current</div>
-          </div>
-          <div class="streak-stat">
-            <div class="num" id="s-sober-best">0</div>
-            <div class="lbl">personal best</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="streak-card">
-        <div class="streak-card-title">// Combat Readiness</div>
-        <div class="streak-numbers">
-          <div class="streak-stat">
-            <div class="num" id="s-sport-current">0</div>
-            <div class="lbl">current</div>
-          </div>
-          <div class="streak-stat">
-            <div class="num" id="s-sport-best">0</div>
-            <div class="lbl">personal best</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="hud-panel">
-        <div class="panel-label">Operative Log // Last 7 Days</div>
-        <div id="historyList"></div>
-      </div>
-
-    </div>
+<!-- Header -->
+<header class="header">
+  <div class="header-avatar">J</div>
+  <div class="header-info">
+    <h1>Jarvisphine</h1>
+    <p>companion system // v3.0</p>
   </div>
+  <div class="status-dot"></div>
+</header>
 
-  <!-- ── SETTINGS SCREEN ── -->
-  <div class="screen" id="screen-settings">
-    <div class="settings-scroll">
-
-      <!-- API Provider -->
-      <div class="settings-card">
-        <h3>AI Provider</h3>
-        <p>Select your AI engine. Claude Haiku or DeepSeek Chat — both work great.</p>
-        <div class="provider-toggle">
-          <button class="provider-btn active" data-provider="claude">Claude</button>
-          <button class="provider-btn" data-provider="deepseek">DeepSeek</button>
-        </div>
-        <div id="providerStatus">// CLAUDE HAIKU ACTIVE</div>
-      </div>
-
-      <!-- Claude Key -->
-      <div class="settings-card">
-        <h3>Claude API Key</h3>
-        <p>Get at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> — ~€1-2/month</p>
-        <input type="password" class="input-field" id="apiKeyInput" placeholder="sk-ant-...">
-      </div>
-
-      <!-- DeepSeek Key -->
-      <div class="settings-card">
-        <h3>DeepSeek API Key</h3>
-        <p>Get at <a href="https://platform.deepseek.com" target="_blank">platform.deepseek.com</a> — even cheaper</p>
-        <input type="password" class="input-field" id="deepseekKeyInput" placeholder="sk-...">
-      </div>
-
-      <!-- Name -->
-      <div class="settings-card">
-        <h3>Operative Name</h3>
-        <p>What should she call you?</p>
-        <input type="text" class="input-field" id="userNameInput" placeholder="Никит">
-      </div>
-
-      <button class="btn-primary" id="saveSettings">// Save Configuration</button>
-
-      <div class="settings-card danger-zone">
-        <h3>System Reset</h3>
-        <p>Wipe all data. Streaks gone. Cannot be undone.</p>
-        <button class="btn-danger" onclick="if(confirm('CONFIRM SYSTEM RESET?')){localStorage.clear();location.reload();}">
-          // Initiate Reset
-        </button>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- Bottom Nav -->
-  <nav class="bottom-nav">
-    <button class="nav-btn" data-screen="home">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
-        <polyline points="9,22 9,12 15,12 15,22"/>
-      </svg>
-      HQ
+<!-- CHAT -->
+<div class="screen active" id="screen-chat">
+  <div id="chatMessages"></div>
+  <div class="chat-input-area">
+    <button id="voiceBtn" title="Hold for Neural Link">🎙️</button>
+    <textarea id="chatInput" placeholder="// transmit message..." rows="1"></textarea>
+    <button id="sendBtn">
+      <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
     </button>
-    <button class="nav-btn active" data-screen="chat">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
-      </svg>
-      Comms
-    </button>
-    <button class="nav-btn" data-screen="streaks">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/>
-      </svg>
-      Intel
-    </button>
-    <button class="nav-btn" data-screen="settings">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="3"/>
-        <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
-      </svg>
-      Config
-    </button>
-  </nav>
+  </div>
+</div>
 
-  <!-- Toast -->
-  <div id="toast"></div>
+<!-- HOME / HQ -->
+<div class="screen" id="screen-home">
+  <div class="home-scroll">
 
-  <script src="jarvisphine.js"></script>
-  <script src="app.js"></script>
+    <!-- Last Transmission -->
+    <div class="hud-panel">
+      <div class="panel-label">Last Transmission</div>
+      <div style="display:flex;gap:10px;align-items:flex-start">
+        <div class="avatar" style="width:26px;height:26px;font-size:9px;flex-shrink:0">J</div>
+        <p id="lastMessage" style="font-size:13px;color:var(--text2);line-height:1.5;font-style:italic">// awaiting first contact</p>
+      </div>
+    </div>
+
+    <!-- Threat Level -->
+    <div class="threat-panel">
+      <div class="threat-header">
+        <div class="threat-title">// Threat Level</div>
+        <div class="threat-indicator-dot" id="threatIndicator"></div>
+      </div>
+      <div class="threat-bar-bg"><div id="threatBar"></div></div>
+      <div class="threat-info">
+        <div id="threatLabel">SCANNING...</div>
+        <div id="threatDesc" style="font-size:11px;color:var(--text2)"></div>
+      </div>
+    </div>
+
+    <!-- Operative Vitals -->
+    <div class="hud-panel">
+      <div class="panel-label">Operative Vitals</div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">// Drinks</div>
+          <div class="stat-value" id="stat-drinks">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">// Sport</div>
+          <div class="stat-value green" id="stat-sport">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">// Mood</div>
+          <div class="stat-value" id="stat-mood">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">// Water</div>
+          <div class="stat-value" id="stat-water">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Streaks -->
+    <div class="hud-panel">
+      <div class="panel-label">Active Streaks</div>
+      <div class="streak-row">
+        <div class="streak-pill">
+          <span class="streak-icon">🧘</span>
+          <div class="streak-info">
+            <div class="streak-num" id="streak-sober">0</div>
+            <div class="streak-label">sober days</div>
+          </div>
+        </div>
+        <div class="streak-pill">
+          <span class="streak-icon">⚡</span>
+          <div class="streak-info">
+            <div class="streak-num" id="streak-sport">0</div>
+            <div class="streak-label">sport days</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mission Briefing -->
+    <div class="mission-panel">
+      <div class="panel-label">Mission Briefing</div>
+      <div id="missionBriefingText">// press generate for today's tactical briefing</div>
+      <button class="btn-hud" id="generateBriefing">⚡ GENERATE BRIEFING</button>
+    </div>
+
+    <!-- Quick Log -->
+    <div class="hud-panel">
+      <div class="panel-label">Quick Log</div>
+      <div class="quick-log-grid">
+        <button class="quick-log" data-type="drinks" data-value="0">🚫 0 drinks</button>
+        <button class="quick-log" data-type="drinks" data-value="1">🍺 1 drink</button>
+        <button class="quick-log" data-type="drinks" data-value="3">🍻 3+ drinks</button>
+        <button class="quick-log" data-type="sport" data-value="yes">✅ sport done</button>
+        <button class="quick-log" data-type="sport" data-value="no">❌ no sport</button>
+        <button class="quick-log" data-type="mood" data-value="good">😊 good mood</button>
+        <button class="quick-log" data-type="mood" data-value="low">😔 low mood</button>
+        <button class="quick-log" data-type="water" data-value="6">💧 6 glasses</button>
+        <button class="quick-log" data-type="water" data-value="8">💧 8 glasses</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- INTEL -->
+<div class="screen" id="screen-intel">
+  <div class="intel-scroll">
+
+    <!-- Streaks -->
+    <div class="streak-card">
+      <div class="streak-card-title">// Sober Protocol</div>
+      <div class="streak-numbers">
+        <div class="streak-stat"><div class="num" id="s-sober-current">0</div><div class="lbl">current</div></div>
+        <div class="streak-stat"><div class="num" id="s-sober-best">0</div><div class="lbl">best</div></div>
+      </div>
+    </div>
+
+    <div class="streak-card">
+      <div class="streak-card-title">// Combat Readiness</div>
+      <div class="streak-numbers">
+        <div class="streak-stat"><div class="num" id="s-sport-current">0</div><div class="lbl">current</div></div>
+        <div class="streak-stat"><div class="num" id="s-sport-best">0</div><div class="lbl">best</div></div>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="hud-panel">
+      <div class="panel-label">7-Day Drinks</div>
+      <div class="chart-container">
+        <canvas id="drinksChart"></canvas>
+      </div>
+    </div>
+
+    <div class="hud-panel">
+      <div class="panel-label">Mood Timeline</div>
+      <div class="chart-container">
+        <canvas id="moodChart"></canvas>
+      </div>
+    </div>
+
+    <div class="hud-panel">
+      <div class="panel-label">Sport Activity // 28 Days</div>
+      <div class="chart-container">
+        <canvas id="sportHeatmap"></canvas>
+      </div>
+    </div>
+
+    <!-- Daily Debriefs -->
+    <div class="hud-panel">
+      <div class="panel-label">Daily Debriefs</div>
+      <div id="debriefList"></div>
+      <button class="btn-hud" id="debriefBtn" onclick="triggerManualDebrief()" style="margin-top:12px">📋 GENERATE DEBRIEF</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- CONFIG -->
+<div class="screen" id="screen-settings">
+  <div class="settings-scroll">
+
+    <div class="settings-card">
+      <h3>AI Provider</h3>
+      <p>Claude Haiku or DeepSeek — both work great.</p>
+      <div class="provider-toggle">
+        <button class="provider-btn active" data-provider="claude">Claude</button>
+        <button class="provider-btn" data-provider="deepseek">DeepSeek</button>
+      </div>
+      <div id="providerStatus">// CLAUDE HAIKU ACTIVE</div>
+    </div>
+
+    <div class="settings-card">
+      <h3>Claude API Key</h3>
+      <p>Get at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> — ~€1-2/month</p>
+      <input type="password" class="input-field" id="apiKeyInput" placeholder="sk-ant-...">
+    </div>
+
+    <div class="settings-card">
+      <h3>DeepSeek API Key</h3>
+      <p>Get at <a href="https://platform.deepseek.com" target="_blank">platform.deepseek.com</a> — even cheaper</p>
+      <input type="password" class="input-field" id="deepseekKeyInput" placeholder="sk-...">
+    </div>
+
+    <div class="settings-card">
+      <h3>Operative Name</h3>
+      <p>What should she call you?</p>
+      <input type="text" class="input-field" id="userNameInput" placeholder="Никит">
+    </div>
+
+    <button class="btn-primary" id="saveSettings">// SAVE CONFIGURATION</button>
+
+    <div class="settings-card danger-zone">
+      <h3>System Reset</h3>
+      <p>Wipe all data. Cannot be undone.</p>
+      <button class="btn-danger" onclick="if(confirm('CONFIRM SYSTEM RESET?')){localStorage.clear();location.reload();}">// INITIATE RESET</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- Bottom Nav -->
+<nav class="bottom-nav">
+  <button class="nav-btn" data-screen="home">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+    HQ
+  </button>
+  <button class="nav-btn active" data-screen="chat">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+    Comms
+  </button>
+  <button class="nav-btn" data-screen="intel">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/></svg>
+    Intel
+  </button>
+  <button class="nav-btn" data-screen="settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    Config
+  </button>
+</nav>
+
+<div id="toast"></div>
+
+<script src="jarvisphine.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
