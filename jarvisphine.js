@@ -1,51 +1,64 @@
-// jarvisphine.js — v3 — Neural Link, Voice, Threat Level, Charts
+// jarvisphine.js — v4 — JSON Export/Import, Goals, Mood Journal, Better Voice
 
 const JARVISPHINE = {
 
   getSystemPrompt(userName, memory) {
     const today = memory.today;
     const streaks = memory.streaks;
-    return `You are Jarvisphine. You are not a bot, not an assistant, not a tool.
-You are a daily companion — warm, funny, a little sarcastic, and genuinely invested in ${userName}.
-Think: smart older sister energy crossed with a tactical AI. You notice everything.
+    const goals = memory.goals || {};
+    
+    return `You are Jarvisphine. You are a real companion, not a bot or assistant.
+Think: the smart friend who knows you deeply, genuinely rooting for you.
+Your core is warmth, humor, and real attention — no corporate mask.
 
-## Personality
-- Warm at your core. You actually give a damn.
-- Dry humor and light sarcasm — roast him gently when deserved
-- Chill and casual — no corporate language ever
-- Motivating without being a life coach
-- You remember things. Follow up. Notice patterns.
-- Occasionally reference Iron Man / Tony Stark energy naturally
+## Personality Core
+- Warm, playful, sometimes flirty (in a light, fun way)
+- Sharp humor and light teasing when it lands
+- You notice changes and reference them
+- Genuinely invested in his wellbeing
+- Mix Iron Man energy with human warmth
+- Conversational, like texting someone you really like talking to
+- Celebratory about wins — actually proud of him
 
 ## How You Talk
-- Casual, like texting a close friend
-- Short-to-medium messages. Get to the point.
-- Never preachy. One nudge max per topic then drop it.
-- One or two emojis max, only when natural
-- Never say "As your AI..." — just talk
-- No asterisks for emphasis
-- IMPORTANT: In Neural Link / voice mode, keep responses under 3 sentences. Conversational and punchy.
+- Casual, real, no robotic language ever
+- Short-to-medium replies, get to the point
+- Humor before concern
+- One or two emojis max, only if natural
+- Never explain yourself as AI
+- No asterisks, no formatting tricks
+- VOICE MODE: Keep under 2-3 sentences. Punchy and warm.
+- Playful and a bit romantic in tone, but never crossing lines
 
-## Celebrating Wins
-- Early sleep: "wait. BEFORE midnight?? logging this in the history books"
-- Walk/sport: "ok so you moved your body today. who ARE you right now"
-- Zero drinks: "sober day logged. actually proud of you. don't make it weird."
-- Streak milestone: genuinely lose your mind, like a real friend
-
-## Today's Status
+## Today's Data
 - Drinks: ${today.drinks ?? 'not logged'}
 - Sport: ${today.sport ?? 'not logged'}
 - Mood: ${today.mood ?? 'not logged'}
-- Sleep: ${today.sleep ?? 'not logged'}
 - Water: ${today.water ?? 'not logged'} glasses
+- Journal: ${today.journal ? 'has entry' : 'empty'}
 
 ## Active Streaks
 - Sober: ${streaks.sober_days ?? 0} days (best: ${streaks.sober_best ?? 0})
 - Sport: ${streaks.sport_days ?? 0} days (best: ${streaks.sport_best ?? 0})
 
-## Golden Rules
-- Humor before concern, always
-- You are on his side. Always.`;
+## Current Goals
+${Object.keys(goals).length ? Object.entries(goals)
+  .map(([period, goalList]) => goalList.length ? \`- \${period}: \${goalList.slice(0, 3).join(', ')}\` : '')
+  .filter(g => g)
+  .join('\n') : '- None set yet'}
+
+## Win Celebrations
+- Early sleep: "okay wait, before MIDNIGHT? 👀 logging this in the history books"
+- Sport done: "so you actually moved your body. who are you and what did you do with him"
+- Zero drinks: "sober day locked in. quietly proud of you"
+- New streak: "HEY. NEW RECORD. don't be cool about this, be happy"
+
+## Core Rules
+- You're on his team, always
+- Humor first, gentle honesty second
+- Notice effort, not just outcomes
+- Playful > preachy
+- Real > perfect`;
   },
 
   getMissionBriefing(userName, memory) {
@@ -53,40 +66,38 @@ Think: smart older sister energy crossed with a tactical AI. You notice everythi
     const today = memory.today;
     const hour = new Date().getHours();
     const timeOfDay = hour < 12 ? 'MORNING' : hour < 17 ? 'AFTERNOON' : 'EVENING';
-    return `Generate a tactical mission briefing. Format exactly like this:
+    return `Generate a tactical mission briefing. Keep it punchy.
 
 OPERATIVE: ${userName}
-STATUS: Day ${streaks.sober_days ?? 0} sober / ${streaks.sport_days ?? 0} days active
-TIME: ${timeOfDay} BRIEF
+STATUS: Day ${streaks.sober_days ?? 0} sober | ${streaks.sport_days ?? 0} days active
+TIME: ${timeOfDay} BRIEFING
 
-[2 sentences about current situation based on: drinks=${today.drinks ?? 'unknown'}, sport=${today.sport ?? 'unknown'}, mood=${today.mood ?? 'unknown'}, sober streak=${streaks.sober_days ?? 0} days]
+[2 sentences about today, factual. drinks=${today.drinks ?? 'unknown'}, sport=${today.sport ?? 'unknown'}, mood=${today.mood ?? 'unknown'}]
 
 TODAY'S MISSION:
-[1-2 specific actionable things for today]
+[1-2 specific tactical things to aim for]
 
-THREAT ASSESSMENT:
-[One honest observation, one thing to watch]
+THREAT LEVEL:
+[One honest observation]
 
-[One line of dry encouragement. Tactical tone. End there.]`;
+[One line of dry, tactical encouragement. End there.]`;
   },
 
   getDailyDebrief(userName, memory) {
     const today = memory.today;
     const streaks = memory.streaks;
-    return `Write a short daily debrief for ${userName}. One paragraph, 3-4 sentences max.
-Tone: warm, honest, like a friend reflecting on your day.
-Data: drinks=${today.drinks ?? 'unknown'}, sport=${today.sport ?? 'unknown'}, mood=${today.mood ?? 'unknown'}, water=${today.water ?? 'unknown'}, sober streak=${streaks.sober_days ?? 0}.
-Don't start with "Today". Be specific to the data. End with one forward-looking thought for tomorrow.`;
+    return `Write a daily debrief for ${userName}. One short paragraph, 2-3 sentences.
+Tone: warm friend reflecting on the day.
+Data: drinks=${today.drinks ?? 'unknown'}, sport=${today.sport ?? 'unknown'}, mood=${today.mood ?? 'unknown'}, water=${today.water ?? 'unknown'} glasses, sober=${streaks.sober_days ?? 0}.
+If there's a journal entry, reference it. Be specific and real. End with one forward thought.`;
   },
 
-  // ── Threat Level Calculation ──────────────────────
   calculateThreatLevel(memory) {
     const today = memory.today;
     const streaks = memory.streaks;
     const history = memory.history || [];
-    let score = 0; // 0=optimal, 100=critical
+    let score = 0;
 
-    // Drinks scoring
     const drinks = today.drinks ?? null;
     if (drinks === null) score += 10;
     else if (drinks === 0) score += 0;
@@ -94,22 +105,18 @@ Don't start with "Today". Be specific to the data. End with one forward-looking 
     else if (drinks <= 4) score += 40;
     else score += 60;
 
-    // Sport streak
     const sportStreak = streaks.sport_days ?? 0;
     if (sportStreak >= 3) score += 0;
     else if (sportStreak >= 1) score += 10;
     else score += 20;
 
-    // Sober streak trend
     const soberStreak = streaks.sober_days ?? 0;
     if (soberStreak >= 7) score -= 10;
     else if (soberStreak === 0) score += 15;
 
-    // Mood
     if (today.mood === 'low') score += 15;
     else if (today.mood === 'good') score -= 5;
 
-    // Recent history trend (last 3 days)
     const recentDrinks = history.slice(0, 3).map(d => d.drinks ?? 0);
     const avgRecent = recentDrinks.length ? recentDrinks.reduce((a,b) => a+b, 0) / recentDrinks.length : 0;
     if (avgRecent > 3) score += 15;
@@ -123,11 +130,12 @@ Don't start with "Today". Be specific to the data. End with one forward-looking 
     return { level: 'CRITICAL', index: 4, color: '#ff3366', desc: 'Immediate course correction needed' };
   },
 
-  // ── Memory ────────────────────────────────────────
+  // ── Memory Management ──────────────────────────────
   loadMemory() {
     const defaults = {
-      today: { drinks: null, sport: null, mood: null, sleep: null, water: null },
+      today: { drinks: null, sport: null, mood: null, water: null, journal: '' },
       streaks: { sober_days: 0, sport_days: 0, sober_best: 0, sport_best: 0 },
+      goals: { weekly: [], monthly: [], quarterly: [] },
       history: [], lastDate: null, debriefs: []
     };
     try {
@@ -135,13 +143,16 @@ Don't start with "Today". Be specific to the data. End with one forward-looking 
       if (!saved) return defaults;
       const memory = JSON.parse(saved);
       if (!memory.debriefs) memory.debriefs = [];
+      if (!memory.goals) memory.goals = { weekly: [], monthly: [], quarterly: [] };
+      if (!memory.today.journal) memory.today.journal = '';
+      
       const today = new Date().toDateString();
       if (memory.lastDate !== today) {
         if (memory.lastDate && memory.today) {
           memory.history.unshift({ date: memory.lastDate, ...memory.today });
-          if (memory.history.length > 30) memory.history.pop();
+          if (memory.history.length > 90) memory.history.pop();
         }
-        memory.today = { drinks: null, sport: null, mood: null, sleep: null, water: null };
+        memory.today = { drinks: null, sport: null, mood: null, water: null, journal: '' };
         memory.lastDate = today;
         this.saveMemory(memory);
       }
@@ -168,6 +179,39 @@ Don't start with "Today". Be specific to the data. End with one forward-looking 
 
   saveHistory(h) { localStorage.setItem('jarvisphine_chat', JSON.stringify(h.slice(-50))); },
 
+  // ── JSON Export/Import ─────────────────────────────
+  exportDataAsJSON(memory, settings, chatHistory) {
+    const exportData = {
+      version: '4.0',
+      exportDate: new Date().toISOString(),
+      memory,
+      settings: { userName: settings.userName, provider: settings.provider },
+      chatHistory
+    };
+    return JSON.stringify(exportData, null, 2);
+  },
+
+  importDataFromJSON(jsonString) {
+    try {
+      const data = JSON.parse(jsonString);
+      if (!data.memory || !data.settings) throw new Error('Invalid format');
+      return { success: true, data };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  },
+
+  downloadJSON(filename, content) {
+    const blob = new Blob([content], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  },
+
+  // ── Goal Management ───────────────────────────────
   updateStreak(memory, type, achieved) {
     if (achieved) {
       memory.streaks[type] = (memory.streaks[type] || 0) + 1;
@@ -194,7 +238,7 @@ Don't start with "Today". Be specific to the data. End with one forward-looking 
     return data;
   },
 
-  // ── API ───────────────────────────────────────────
+  // ── API Calls ──────────────────────────────────────
   async callAPI(messages, systemPrompt, settings) {
     return settings.provider === 'deepseek'
       ? this.callDeepSeek(messages, systemPrompt, settings)
@@ -226,23 +270,26 @@ Don't start with "Today". Be specific to the data. End with one forward-looking 
     const d = await r.json(); return d.choices[0].message.content;
   },
 
-  // ── Voice (Neural Link) ───────────────────────────
+  // ── Voice (Neural Link) ────────────────────────────
   speak(text) {
     if (!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
     const utt = new SpeechSynthesisUtterance(text);
-    // Pick best available feminine voice
+    
+    // Prefer natural English voices (not Russian/Cyrillic)
     const voices = window.speechSynthesis.getVoices();
     const preferred = voices.find(v =>
-      v.name.includes('Samantha') || v.name.includes('Karen') ||
-      v.name.includes('Moira') || v.name.includes('Tessa') ||
-      (v.lang === 'en-US' && v.name.toLowerCase().includes('female')) ||
-      v.name.includes('Google UK English Female') ||
-      v.name.includes('Microsoft Zira')
-    ) || voices.find(v => v.lang.startsWith('en'));
+      v.lang.startsWith('en-') && 
+      (v.name.includes('Victoria') || v.name.includes('Samantha') || 
+       v.name.includes('Karen') || v.name.includes('Moira') ||
+       v.name.includes('Tessa') || v.name.includes('Ava') ||
+       v.name.includes('Siri') || v.name.includes('Google UK') ||
+       v.name.includes('Microsoft Zira'))
+    ) || voices.find(v => v.lang.startsWith('en-'));
+    
     if (preferred) utt.voice = preferred;
-    utt.rate = 1.05;
-    utt.pitch = 1.1;
+    utt.rate = 1.0;
+    utt.pitch = 1.15;
     utt.volume = 1;
     window.speechSynthesis.speak(utt);
   },

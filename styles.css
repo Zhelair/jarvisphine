@@ -335,6 +335,35 @@ canvas { width:100%; display:block; }
 .nav-btn.active { color:var(--gold); }
 .nav-btn.active svg { filter:drop-shadow(0 0 4px rgba(245,166,35,0.7)); }
 
+/* ── Modal ──────────────────────────────────────────── */
+.modal { position:fixed; inset:0; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:500; opacity:0; pointer-events:none; transition:opacity 0.3s; }
+.modal.active { opacity:1; pointer-events:auto; }
+.modal-content { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius-lg); padding:20px; width:90%; max-width:400px; box-shadow:0 0 30px rgba(245,166,35,0.1); }
+.modal-content h2 { font-family:'Orbitron',sans-serif; color:var(--gold); margin-bottom:16px; font-size:14px; letter-spacing:2px; }
+.modal-content select, .modal-content textarea { width:100%; background:var(--bg3); border:1px solid var(--border); color:var(--text); padding:10px; margin-bottom:12px; font-family:inherit; font-size:12px; border-radius:var(--radius); }
+.modal-content select { height:36px; cursor:pointer; }
+.modal-content textarea { resize:vertical; min-height:80px; }
+.modal-buttons { display:flex; gap:8px; }
+.modal-buttons button { flex:1; }
+
+/* ── Journal/Goals ──────────────────────────────────── */
+.journal-container { padding:12px; height:100%; overflow-y:auto; }
+.goals-scroll { padding:12px; overflow-y:auto; }
+.goals-section { margin-bottom:20px; }
+.goals-section h3 { font-family:'Orbitron',sans-serif; color:var(--gold); font-size:11px; letter-spacing:2px; margin-bottom:10px; text-transform:uppercase; }
+.goal-item { background:var(--bg3); border-left:2px solid var(--gold); padding:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; border-radius:var(--radius); font-size:12px; color:var(--text); }
+.goal-item span { flex:1; }
+.btn-delete { background:transparent; border:none; color:var(--text2); cursor:pointer; font-size:14px; padding:4px 8px; transition:color 0.2s; }
+.btn-delete:hover { color:var(--red); }
+
+/* ── Button variants ────────────────────────────────── */
+.btn-hud { padding:10px 16px; border:1px solid var(--gold); background:linear-gradient(135deg,rgba(245,166,35,0.2),rgba(255,136,0,0.1)); color:var(--gold); font-family:'Orbitron',sans-serif; font-size:11px; letter-spacing:1px; text-transform:uppercase; border-radius:var(--radius); cursor:pointer; transition:all 0.2s; }
+.btn-hud:hover { background:linear-gradient(135deg,rgba(245,166,35,0.3),rgba(255,136,0,0.2)); box-shadow:0 0 12px rgba(245,166,35,0.2); }
+.btn-hud:disabled { opacity:0.5; cursor:not-allowed; }
+
+/* ── Empty States ───────────────────────────────────── */
+.empty-state { text-align:center; color:var(--text2); font-size:11px; padding:20px; font-style:italic; }
+
 /* ── Toast ──────────────────────────────────────────── */
 #toast { position:fixed; bottom:72px; left:50%; transform:translateX(-50%) translateY(12px); background:var(--bg3); border:1px solid var(--gold); color:var(--gold); padding:7px 16px; border-radius:var(--radius); font-family:'Orbitron',sans-serif; font-size:9px; letter-spacing:2px; opacity:0; transition:all 0.3s; pointer-events:none; white-space:nowrap; z-index:100; text-transform:uppercase; box-shadow:var(--glow-gold); }
 #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }

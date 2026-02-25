@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <title>JARVISPHINE // v3.0</title>
+  <title>JARVISPHINE // v4.0</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
 <!-- Boot -->
 <div id="bootOverlay">
   <div class="boot-arc"><div class="boot-arc-inner"></div></div>
-  <div id="bootText">INITIALIZING JARVISPHINE v3.0...</div>
+  <div id="bootText">INITIALIZING JARVISPHINE v4.0...</div>
 </div>
 
 <!-- Neural Link Overlay -->
@@ -34,12 +34,29 @@
   <div class="nl-hint">HOLD TO SPEAK // RELEASE TO SEND</div>
 </div>
 
+<!-- Goal Modal -->
+<div id="goalModal" class="modal">
+  <div class="modal-content">
+    <h2>Add New Goal</h2>
+    <select id="goalPeriod">
+      <option value="weekly">Weekly</option>
+      <option value="monthly">Monthly</option>
+      <option value="quarterly">3-Month</option>
+    </select>
+    <textarea id="goalText" placeholder="e.g., Run 3x this week" maxlength="100"></textarea>
+    <div class="modal-buttons">
+      <button class="btn-primary" id="saveGoalBtn">SAVE</button>
+      <button class="btn-secondary" id="closeGoalModal">CANCEL</button>
+    </div>
+  </div>
+</div>
+
 <!-- Header -->
 <header class="header">
   <div class="header-avatar">J</div>
   <div class="header-info">
     <h1>Jarvisphine</h1>
-    <p>companion system // v3.0</p>
+    <p>companion system // v4.0</p>
   </div>
   <div class="status-dot"></div>
 </header>
@@ -59,8 +76,6 @@
 <!-- HOME / HQ -->
 <div class="screen" id="screen-home">
   <div class="home-scroll">
-
-    <!-- Last Transmission -->
     <div class="hud-panel">
       <div class="panel-label">Last Transmission</div>
       <div style="display:flex;gap:10px;align-items:flex-start">
@@ -69,7 +84,6 @@
       </div>
     </div>
 
-    <!-- Threat Level -->
     <div class="threat-panel">
       <div class="threat-header">
         <div class="threat-title">// Threat Level</div>
@@ -82,7 +96,6 @@
       </div>
     </div>
 
-    <!-- Operative Vitals -->
     <div class="hud-panel">
       <div class="panel-label">Operative Vitals</div>
       <div class="stats-grid">
@@ -105,7 +118,6 @@
       </div>
     </div>
 
-    <!-- Active Streaks -->
     <div class="hud-panel">
       <div class="panel-label">Active Streaks</div>
       <div class="streak-row">
@@ -126,14 +138,12 @@
       </div>
     </div>
 
-    <!-- Mission Briefing -->
     <div class="mission-panel">
       <div class="panel-label">Mission Briefing</div>
       <div id="missionBriefingText">// press generate for today's tactical briefing</div>
       <button class="btn-hud" id="generateBriefing">⚡ GENERATE BRIEFING</button>
     </div>
 
-    <!-- Quick Log -->
     <div class="hud-panel">
       <div class="panel-label">Quick Log</div>
       <div class="quick-log-grid">
@@ -148,15 +158,12 @@
         <button class="quick-log" data-type="water" data-value="8">💧 8 glasses</button>
       </div>
     </div>
-
   </div>
 </div>
 
 <!-- INTEL -->
 <div class="screen" id="screen-intel">
   <div class="intel-scroll">
-
-    <!-- Streaks -->
     <div class="streak-card">
       <div class="streak-card-title">// Sober Protocol</div>
       <div class="streak-numbers">
@@ -173,7 +180,6 @@
       </div>
     </div>
 
-    <!-- Charts -->
     <div class="hud-panel">
       <div class="panel-label">7-Day Drinks</div>
       <div class="chart-container">
@@ -195,19 +201,52 @@
       </div>
     </div>
 
-    <!-- Daily Debriefs -->
     <div class="hud-panel">
       <div class="panel-label">Daily Debriefs</div>
       <div id="debriefList"></div>
       <button class="btn-hud" id="debriefBtn" onclick="triggerManualDebrief()" style="margin-top:12px">📋 GENERATE DEBRIEF</button>
     </div>
+  </div>
+</div>
 
+<!-- JOURNAL -->
+<div class="screen" id="screen-journal">
+  <div class="journal-container">
+    <div class="hud-panel">
+      <div class="panel-label">Daily Journal Entry</div>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:12px">// space to reflect on today</p>
+      <textarea id="journalText" placeholder="what's on your mind today..." maxlength="500" style="width:100%;height:200px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:10px;font-family:inherit;font-size:12px;resize:none;margin-bottom:8px"></textarea>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span id="journalCharCount" style="font-size:11px;color:var(--text2)">0 / 500</span>
+        <button class="btn-hud" id="journalSaveBtn">💭 SAVE ENTRY</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- GOALS -->
+<div class="screen" id="screen-goals">
+  <div class="goals-scroll">
+    <div class="hud-panel">
+      <div class="panel-label">Goal Tracking</div>
+      <button class="btn-hud" id="addGoalBtn" style="margin-bottom:16px">➕ ADD NEW GOAL</button>
+      <div id="goalsList"></div>
+    </div>
   </div>
 </div>
 
 <!-- CONFIG -->
 <div class="screen" id="screen-settings">
   <div class="settings-scroll">
+    <div class="settings-card">
+      <h3>Data Management</h3>
+      <p>Backup & restore your data anytime</p>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn-primary" id="exportDataBtn" style="flex:1">📥 EXPORT DATA</button>
+        <button class="btn-secondary" id="importDataBtn" style="flex:1">📤 IMPORT DATA</button>
+      </div>
+      <input type="file" id="importFileInput" accept=".json" style="display:none">
+    </div>
 
     <div class="settings-card">
       <h3>AI Provider</h3>
@@ -232,9 +271,9 @@
     </div>
 
     <div class="settings-card">
-      <h3>Operative Name</h3>
+      <h3>Your Name</h3>
       <p>What should she call you?</p>
-      <input type="text" class="input-field" id="userNameInput" placeholder="Никит">
+      <input type="text" class="input-field" id="userNameInput" placeholder="Friend">
     </div>
 
     <button class="btn-primary" id="saveSettings">// SAVE CONFIGURATION</button>
@@ -244,7 +283,6 @@
       <p>Wipe all data. Cannot be undone.</p>
       <button class="btn-danger" onclick="if(confirm('CONFIRM SYSTEM RESET?')){localStorage.clear();location.reload();}">// INITIATE RESET</button>
     </div>
-
   </div>
 </div>
 
@@ -261,6 +299,14 @@
   <button class="nav-btn" data-screen="intel">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/></svg>
     Intel
+  </button>
+  <button class="nav-btn" data-screen="journal">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+    Journal
+  </button>
+  <button class="nav-btn" data-screen="goals">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m2.12 2.12l4.24 4.24M1 12h6m6 0h6m-15.78 7.78l4.24-4.24m2.12-2.12l4.24-4.24"/></svg>
+    Goals
   </button>
   <button class="nav-btn" data-screen="settings">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>

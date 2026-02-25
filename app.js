@@ -1,4 +1,4 @@
-// app.js — v3
+// app.js — v4 — Goals, Journal, Export/Import
 
 let currentScreen = 'chat';
 let chatHistory = [];
@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
     showScreen('settings');
     showToast('SYSTEM: API KEY REQUIRED');
   } else if (chatHistory.length === 0) {
-    setTimeout(() => sendJarvisphineMessage("systems online. hey — I'm Jarvisphine. no lectures, just real talk. how's today looking?"), 2200);
+    setTimeout(() => sendJarvisphineMessage("hey — I'm Jarvisphine. your real companion, not a bot. how's today looking?"), 2200);
   } else {
     renderChat();
   }
@@ -39,6 +39,23 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('saveSettings').addEventListener('click', saveSettingsFn);
   document.getElementById('generateBriefing').addEventListener('click', generateMissionBriefing);
   document.querySelectorAll('.quick-log').forEach(b => b.addEventListener('click', () => quickLog(b.dataset.type, b.dataset.value)));
+
+  // Export/Import buttons
+  document.getElementById('exportDataBtn').addEventListener('click', exportData);
+  document.getElementById('importDataBtn').addEventListener('click', () => document.getElementById('importFileInput').click());
+  document.getElementById('importFileInput').addEventListener('change', importData);
+
+  // Goals
+  document.getElementById('addGoalBtn').addEventListener('click', openGoalModal);
+  document.getElementById('closeGoalModal').addEventListener('click', closeGoalModal);
+  document.getElementById('saveGoalBtn').addEventListener('click', saveGoal);
+  document.getElementById('goalPeriod').addEventListener('change', () => {
+    const per = document.getElementById('goalPeriod').value;
+    document.getElementById('goalText').placeholder = per === 'weekly' ? 'e.g., Run 3x this week' : per === 'monthly' ? 'e.g., Read 2 books' : 'e.g., Learn Spanish basics';
+  });
+
+  // Journal
+  document.getElementById('journalSaveBtn').addEventListener('click', saveJournal);
 
   // Voice btn — hold to activate Neural Link
   const vBtn = document.getElementById('voiceBtn');
@@ -69,13 +86,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Voices load async on some browsers
   window.speechSynthesis?.addEventListener('voiceschanged', () => {});
 });
 
 // ── Boot ──────────────────────────────────────────────
 function runBoot() {
-  const lines = ['INITIALIZING JARVISPHINE v3.0...', 'NEURAL LINK READY...', 'THREAT ANALYSIS ONLINE...', 'ALL SYSTEMS NOMINAL.'];
+  const lines = ['INITIALIZING JARVISPHINE v4.0...', 'NEURAL LINK READY...', 'THREAT ANALYSIS ONLINE...', 'ALL SYSTEMS NOMINAL.'];
   const el = document.getElementById('bootText');
   if (!el) return;
   let i = 0;
@@ -97,6 +113,8 @@ function showScreen(name) {
   document.querySelector(`.nav-btn[data-screen="${name}"]`)?.classList.add('active');
   if (name === 'home') renderHome();
   if (name === 'intel') renderIntel();
+  if (name === 'journal') renderJournal();
+  if (name === 'goals') renderGoals();
 }
 
 // ── Chat ──────────────────────────────────────────────
@@ -152,7 +170,7 @@ async function sendMessage(override) {
 
   isTyping = true; showTyping();
   try {
-    const sys = JARVISPHINE.getSystemPrompt(settings.userName || 'Никит', memory);
+    const sys = JARVISPHINE.getSystemPrompt(settings.userName || 'Friend', memory);
     const msgs = chatHistory.slice(-10).map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content }));
     const response = await JARVISPHINE.callAPI(msgs, sys, settings);
     removeTyping();
@@ -214,119 +232,201 @@ function deactivateNeuralLink() {
 }
 
 function startVoiceCapture() {
-  if (!recognition) { showToast('VOICE NOT SUPPORTED'); return; }
-  if (isRecording) return;
   isRecording = true;
-  document.getElementById('nlMicBtn').classList.add('active');
+  if (recognition) {
+    try { recognition.stop(); } catch(e) {}
+    setTimeout(() => { try { recognition.start(); } catch(e) {} }, 100);
+  }
+  document.getElementById('nlMicBtn').classList.add('recording');
   document.getElementById('nlStatus').textContent = '// LISTENING...';
-  document.getElementById('nlTranscript').textContent = '';
-  try { recognition.start(); } catch(e) {}
 }
 
 function stopVoiceCapture() {
-  if (!isRecording) return;
   isRecording = false;
-  document.getElementById('nlMicBtn')?.classList.remove('active');
+  document.getElementById('nlMicBtn').classList.remove('recording');
   if (recognition) try { recognition.stop(); } catch(e) {}
 }
 
-function stopVoice() {
-  if (!neuralLinkActive) {
-    isRecording = false;
-    document.getElementById('voiceBtn')?.classList.remove('recording');
-    if (recognition) try { recognition.stop(); } catch(e) {}
-  }
-}
-
-async function sendNeuralLinkMessage(text) {
+function sendNeuralLinkMessage(text) {
   if (!text.trim()) return;
-  document.getElementById('nlStatus').textContent = '// PROCESSING...';
-  document.getElementById('nlResponse').textContent = '';
-
-  chatHistory.push({ role: 'user', content: text });
-  try {
-    const sys = JARVISPHINE.getSystemPrompt(settings.userName || 'Никит', memory);
-    const msgs = chatHistory.slice(-6).map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content }));
-    const response = await JARVISPHINE.callAPI(msgs, sys, settings);
-    document.getElementById('nlResponse').textContent = response;
-    document.getElementById('nlStatus').textContent = '// JARVISPHINE';
-    chatHistory.push({ role: 'assistant', content: response });
-    JARVISPHINE.saveHistory(chatHistory);
-    JARVISPHINE.speak(response);
-    appendMsg('user', text);
-    appendMsg('assistant', response);
-  } catch (err) {
-    document.getElementById('nlResponse').textContent = 'CONNECTION ERROR';
-    document.getElementById('nlStatus').textContent = '// ERROR';
-  }
+  const cleanText = text.trim();
+  document.getElementById('nlTranscript').textContent = '';
+  document.getElementById('nlResponse').textContent = '// PROCESSING...';
+  sendMessage(cleanText);
+  setTimeout(() => {
+    const lastMsg = chatHistory[chatHistory.length - 1];
+    if (lastMsg && lastMsg.role === 'assistant') {
+      document.getElementById('nlResponse').textContent = lastMsg.content.substring(0, 300) + (lastMsg.content.length > 300 ? '...' : '');
+      JARVISPHINE.speak(lastMsg.content);
+    }
+  }, 500);
 }
 
 function pulseArcReactor(active) {
   const arc = document.getElementById('nlArc');
-  if (arc) arc.classList.toggle('active', active);
+  if (active) arc?.classList.add('pulsing');
+  else arc?.classList.remove('pulsing');
 }
+
+function stopVoice() { if (recognition) try { recognition.stop(); } catch(e) {} }
+
+// ── Export / Import ───────────────────────────────────
+function exportData() {
+  const json = JARVISPHINE.exportDataAsJSON(memory, settings, chatHistory);
+  const filename = `jarvisphine_backup_${new Date().toISOString().split('T')[0]}.json`;
+  JARVISPHINE.downloadJSON(filename, json);
+  showToast('// DATA EXPORTED SUCCESSFULLY');
+}
+
+function importData(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const result = JARVISPHINE.importDataFromJSON(ev.target.result);
+    if (!result.success) {
+      showToast(`IMPORT ERROR: ${result.error}`);
+      return;
+    }
+    const { data } = result;
+    memory = data.memory;
+    settings = { ...settings, ...data.settings };
+    chatHistory = data.chatHistory || [];
+    JARVISPHINE.saveMemory(memory);
+    JARVISPHINE.saveSettings(settings);
+    JARVISPHINE.saveHistory(chatHistory);
+    renderChat();
+    renderHome();
+    renderIntel();
+    showToast('// DATA IMPORTED SUCCESSFULLY');
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+// ── Goals ─────────────────────────────────────────────
+function openGoalModal() {
+  document.getElementById('goalModal').classList.add('active');
+  document.getElementById('goalText').value = '';
+  document.getElementById('goalPeriod').value = 'weekly';
+}
+
+function closeGoalModal() {
+  document.getElementById('goalModal').classList.remove('active');
+}
+
+function saveGoal() {
+  const text = document.getElementById('goalText').value.trim();
+  const period = document.getElementById('goalPeriod').value;
+  if (!text) { showToast('GOAL TEXT REQUIRED'); return; }
+  if (!memory.goals) memory.goals = { weekly: [], monthly: [], quarterly: [] };
+  memory.goals[period].push(text);
+  JARVISPHINE.saveMemory(memory);
+  closeGoalModal();
+  renderGoals();
+  showToast(`// GOAL ADDED TO ${period.toUpperCase()}`);
+}
+
+function deleteGoal(period, index) {
+  if (!memory.goals[period]) return;
+  memory.goals[period].splice(index, 1);
+  JARVISPHINE.saveMemory(memory);
+  renderGoals();
+}
+
+function renderGoals() {
+  const goals = memory.goals || { weekly: [], monthly: [], quarterly: [] };
+  const container = document.getElementById('goalsList');
+  if (!container) return;
+
+  let html = '';
+  ['weekly', 'monthly', 'quarterly'].forEach(period => {
+    const list = goals[period] || [];
+    const icon = { weekly: '📅', monthly: '🗓️', quarterly: '📊' }[period];
+    html += `<div class="goals-section">
+      <h3>${icon} ${period.toUpperCase()} GOALS</h3>
+      ${list.length ? list.map((g, i) => `
+        <div class="goal-item">
+          <span>${g}</span>
+          <button onclick="deleteGoal('${period}', ${i})" class="btn-delete">✕</button>
+        </div>
+      `).join('') : '<p class="empty-state">// no goals set</p>'}
+    </div>`;
+  });
+  container.innerHTML = html;
+}
+
+// ── Journal ───────────────────────────────────────────
+function renderJournal() {
+  const journal = memory.today.journal || '';
+  document.getElementById('journalText').value = journal;
+  document.getElementById('journalCharCount').textContent = journal.length + ' / 500';
+}
+
+function saveJournal() {
+  const text = document.getElementById('journalText').value.trim();
+  if (text.length > 500) { showToast('JOURNAL TOO LONG (MAX 500)'); return; }
+  memory.today.journal = text;
+  JARVISPHINE.saveMemory(memory);
+  showToast('// JOURNAL SAVED');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const jt = document.getElementById('journalText');
+  if (jt) {
+    jt.addEventListener('input', () => {
+      const len = jt.value.length;
+      document.getElementById('journalCharCount').textContent = len + ' / 500';
+    });
+  }
+});
 
 // ── Mission Briefing ──────────────────────────────────
-async function generateMissionBriefing() {
-  if (!settings.apiKey && !settings.deepseekKey) return;
+function generateMissionBriefing() {
+  if (!settings.apiKey && !settings.deepseekKey) { showToast('NO API KEY — CHECK CONFIG'); return; }
   const btn = document.getElementById('generateBriefing');
-  const el = document.getElementById('missionBriefingText');
-  btn.textContent = 'GENERATING...'; btn.disabled = true;
-  el.innerHTML = '<span class="scanning">// SCANNING OPERATIVE DATA...</span>';
-  try {
-    const prompt = JARVISPHINE.getMissionBriefing(settings.userName || 'Никит', memory);
-    const r = await JARVISPHINE.callAPI([{ role: 'user', content: prompt }], 'You are a tactical AI. Be concise and punchy.', settings);
-    el.innerHTML = r.replace(/\n/g, '<br>');
-  } catch { el.textContent = '// BRIEFING UNAVAILABLE'; }
-  btn.textContent = '⚡ REFRESH'; btn.disabled = false;
+  btn.disabled = true;
+  btn.textContent = '⚡ GENERATING...';
+  const prompt = JARVISPHINE.getMissionBriefing(settings.userName || 'Friend', memory);
+  JARVISPHINE.callAPI([{ role: 'user', content: prompt }], '', settings).then(response => {
+    document.getElementById('missionBriefingText').innerHTML = response.replace(/\n/g, '<br>');
+    btn.disabled = false;
+    btn.textContent = '⚡ REGENERATE BRIEFING';
+  }).catch(err => {
+    showToast(`ERROR: ${err.message}`);
+    btn.disabled = false;
+    btn.textContent = '⚡ GENERATE BRIEFING';
+  });
 }
 
-// ── Daily Debrief ─────────────────────────────────────
+function triggerManualDebrief() {
+  if (!settings.apiKey && !settings.deepseekKey) { showToast('NO API KEY — CHECK CONFIG'); return; }
+  const prompt = JARVISPHINE.getDailyDebrief(settings.userName || 'Friend', memory);
+  JARVISPHINE.callAPI([{ role: 'user', content: prompt }], '', settings).then(response => {
+    const today = new Date().toDateString();
+    if (!memory.debriefs) memory.debriefs = [];
+    memory.debriefs.unshift({ date: today, text: response });
+    if (memory.debriefs.length > 30) memory.debriefs.pop();
+    JARVISPHINE.saveMemory(memory);
+    renderIntel();
+    showToast('// DEBRIEF GENERATED');
+  }).catch(err => { showToast(`ERROR: ${err.message}`); });
+}
+
 function startDebriefChecker() {
-  // Check every minute if it's past midnight and debrief not yet generated today
-  debriefCheckInterval = setInterval(async () => {
+  debriefCheckInterval = setInterval(() => {
     const now = new Date();
-    if (now.getHours() === 0 && now.getMinutes() === 0) {
-      await generateDailyDebrief();
+    if (now.getHours() === 23 && now.getMinutes() === 0) {
+      triggerManualDebrief();
     }
   }, 60000);
 }
 
-async function generateDailyDebrief() {
-  if (!settings.apiKey && !settings.deepseekKey) return;
-  const today = new Date().toDateString();
-  if (memory.debriefs?.find(d => d.date === today)) return; // already done
-  try {
-    const prompt = JARVISPHINE.getDailyDebrief(settings.userName || 'Никит', memory);
-    const r = await JARVISPHINE.callAPI([{ role: 'user', content: prompt }], 'You are Jarvisphine. Write a warm, honest daily debrief.', settings);
-    if (!memory.debriefs) memory.debriefs = [];
-    memory.debriefs.unshift({ date: today, text: r });
-    if (memory.debriefs.length > 30) memory.debriefs.pop();
-    JARVISPHINE.saveMemory(memory);
-    renderIntel();
-  } catch(e) { console.log('Debrief failed', e); }
-}
-
-// Manual debrief trigger (button on Intel)
-async function triggerManualDebrief() {
-  const btn = document.getElementById('debriefBtn');
-  btn.textContent = 'GENERATING...'; btn.disabled = true;
-  await generateDailyDebrief();
-  // Force regenerate even if exists
-  if (settings.apiKey || settings.deepseekKey) {
-    const today = new Date().toDateString();
-    memory.debriefs = memory.debriefs?.filter(d => d.date !== today) || [];
-    await generateDailyDebrief();
-  }
-  btn.textContent = '📋 GENERATE DEBRIEF'; btn.disabled = false;
-  renderIntel();
-}
-
-// ── Quick Log ─────────────────────────────────────────
 function quickLog(type, value) {
-  const parsed = isNaN(value) ? value : parseInt(value);
-  memory.today[type] = parsed;
-  if (type === 'drinks') JARVISPHINE.updateStreak(memory, 'sober_days', parsed === 0);
+  if (type === 'drinks') memory.today.drinks = parseInt(value);
+  if (type === 'sport') memory.today.sport = value;
+  if (type === 'mood') memory.today.mood = value;
+  if (type === 'water') memory.today.water = parseInt(value);
   if (type === 'sport') JARVISPHINE.updateStreak(memory, 'sport_days', value === 'yes');
   JARVISPHINE.saveMemory(memory);
   renderHome();
@@ -380,7 +480,7 @@ function renderThreatLevel() {
   indicator.style.boxShadow = `0 0 8px ${threat.color}`;
 }
 
-// ── Intel (Charts + Streaks + Debriefs) ──────────────
+// ── Intel ─────────────────────────────────────────────
 function renderIntel() {
   const streaks = memory.streaks || {};
   const history = memory.history || [];
@@ -425,7 +525,6 @@ function drawDrinksChart(history) {
     ctx.fillRect(x, y, barW, barH);
     ctx.fillStyle = color;
     ctx.fillRect(x, y, barW, 2);
-    // Label
     ctx.fillStyle = '#2a4a6a';
     ctx.font = '8px Orbitron, monospace';
     ctx.fillText(val, x + barW/2 - 3, h - 2);
@@ -451,7 +550,6 @@ function drawMoodChart(history) {
     color: moodColor[d.mood] || '#2a4a6a'
   }));
 
-  // Draw line
   if (pts.length > 1) {
     ctx.beginPath();
     ctx.moveTo(pts[0].x, pts[0].y);
@@ -461,7 +559,6 @@ function drawMoodChart(history) {
     ctx.stroke();
   }
 
-  // Draw dots
   pts.forEach(p => {
     ctx.beginPath();
     ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
@@ -530,7 +627,7 @@ function updateProviderStatus() {
 function saveSettingsFn() {
   settings.apiKey = document.getElementById('apiKeyInput').value.trim();
   settings.deepseekKey = document.getElementById('deepseekKeyInput').value.trim();
-  settings.userName = document.getElementById('userNameInput').value.trim() || 'Никит';
+  settings.userName = document.getElementById('userNameInput').value.trim() || 'Friend';
   JARVISPHINE.saveSettings(settings);
   updateProviderStatus();
   showToast('// CONFIGURATION SAVED');
