@@ -6,8 +6,19 @@ const https  = require('https');
 const http   = require('http');
 
 // ── Config ───────────────────────────────────────────
-const TELEGRAM_TOKEN = '8723701453:AAHK8hbUNzt2Yv_6BpJcfvtnm97ygn3Pw8A';
-const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY || '';
+const TELEGRAM_TOKEN  = process.env.TELEGRAM_TOKEN  || '';
+const CLAUDE_API_KEY  = process.env.CLAUDE_API_KEY  || '';
+const DEEPSEEK_API_KEY= process.env.DEEPSEEK_API_KEY|| '';
+
+if (!TELEGRAM_TOKEN) {
+  console.error('ERROR: TELEGRAM_TOKEN env var not set.');
+  console.error('Run: TELEGRAM_TOKEN=yourtoken DEEPSEEK_API_KEY=sk-... node telegram-bot.js');
+  process.exit(1);
+}
+if (!CLAUDE_API_KEY && !DEEPSEEK_API_KEY) {
+  console.warn('WARNING: No AI key set. Bot will receive messages but cannot reply with AI.');
+  console.warn('Set DEEPSEEK_API_KEY=sk-... or CLAUDE_API_KEY=sk-ant-...');
+}
 const SUPABASE_URL   = 'https://aufkmpzzxbdzhnodrpkd.supabase.co';
 const SUPABASE_KEY   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1ZmttcHp6eGJkemhub2RycGtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3NDEzMjAsImV4cCI6MjA4ODMxNzMyMH0.z-gWEs8EPCCiwTvTvwGnJWpz-XYNOMYloSfx5mwz-CE';
 
@@ -108,9 +119,33 @@ async function getUpdates(offset) {
   });
 }
 
-// ── Claude API ────────────────────────────────────────
+// ── AI API (DeepSeek or Claude) ───────────────────────
+async function callAI(messages, systemPrompt) {
+  if (DEEPSEEK_API_KEY) return callDeepSeek(messages, systemPrompt);
+  if (CLAUDE_API_KEY)   return callClaude(messages, systemPrompt);
+  throw new Error('No AI API key set. Add DEEPSEEK_API_KEY or CLAUDE_API_KEY.');
+}
+
+async function callDeepSeek(messages, systemPrompt) {
+  const parsed = new URL('https://api.deepseek.com/chat/completions');
+  const res = await request('https://api.deepseek.com/chat/completions', {
+    hostname: parsed.hostname,
+    path: parsed.pathname,
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+    }
+  }, JSON.stringify({
+    model: 'deepseek-chat',
+    max_tokens: 350,
+    messages: [{ role: 'system', content: systemPrompt }, ...messages]
+  }));
+  if (res.error) throw new Error(res.error.message);
+  return res.choices[0].message.content;
+}
+
 async function callClaude(messages, systemPrompt) {
-  if (!CLAUDE_API_KEY) throw new Error('No CLAUDE_API_KEY set');
   const parsed = new URL('https://api.anthropic.com/v1/messages');
   const res = await request('https://api.anthropic.com/v1/messages', {
     hostname: parsed.hostname,
@@ -289,7 +324,7 @@ async function handleMessage(update) {
   try {
     const sys  = getSystemPrompt(memory);
     const msgs = [{ role: 'user', content: text }];
-    const resp = await callClaude(msgs, sys);
+    const resp = await callAI(msgs, sys);
     await sendMessage(chatId, resp);
 
     // Save updated memory back to Supabase
@@ -333,7 +368,7 @@ async function sendCheckIn(slotKey) {
     const memory  = await DB.get('memory') || {};
     const prompt  = getCheckInPrompt(slotKey, memory);
     const sys     = getSystemPrompt(memory);
-    const resp    = await callClaude([{ role: 'user', content: prompt }], sys);
+    const resp    = await callAI([{ role: 'user', content: prompt }], sys);
     await sendMessage(knownChatId, `<i>// ${slotKey.toUpperCase()} CHECK-IN</i>\n\n${resp}`);
     console.log(`✓ Check-in sent: ${slotKey}`);
   } catch (e) {
@@ -365,7 +400,8 @@ console.log('╔═════════════════════�
 console.log('║   JARVISPHINE v5.0 — TELEGRAM BOT   ║');
 console.log('╠══════════════════════════════════════╣');
 console.log(`║  Bot: @Jarvisphine_bot               ║`);
-console.log(`║  Claude API: ${CLAUDE_API_KEY ? 'LOADED' : 'NOT SET ← SET ENV VAR'}             ║`);
+const aiStatus = DEEPSEEK_API_KEY ? 'DeepSeek: LOADED' : CLAUDE_API_KEY ? 'Claude:   LOADED' : 'NO AI KEY SET ←';
+console.log(`║  AI: ${aiStatus.padEnd(34)}║`);
 console.log('╠══════════════════════════════════════╣');
 console.log('║  Scheduled check-ins:                ║');
 console.log('║  11:30 · 14:00 · 17:00 · 20:00 ·23:00║');
