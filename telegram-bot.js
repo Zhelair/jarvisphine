@@ -6,8 +6,14 @@ const https  = require('https');
 const http   = require('http');
 
 // ── Config ───────────────────────────────────────────
-const TELEGRAM_TOKEN = '8723701453:AAHK8hbUNzt2Yv_6BpJcfvtnm97ygn3Pw8A';
+const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN || '';
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY || '';
+
+if (!TELEGRAM_TOKEN) {
+  console.error('ERROR: TELEGRAM_TOKEN env var not set.');
+  console.error('Run: TELEGRAM_TOKEN=yourtoken CLAUDE_API_KEY=sk-ant-... node telegram-bot.js');
+  process.exit(1);
+}
 const SUPABASE_URL   = 'https://aufkmpzzxbdzhnodrpkd.supabase.co';
 const SUPABASE_KEY   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1ZmttcHp6eGJkemhub2RycGtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3NDEzMjAsImV4cCI6MjA4ODMxNzMyMH0.z-gWEs8EPCCiwTvTvwGnJWpz-XYNOMYloSfx5mwz-CE';
 
