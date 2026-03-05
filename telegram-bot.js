@@ -261,6 +261,8 @@ async function handleMessage(update) {
   const chatId = msg.chat.id;
   const text   = msg.text;
 
+  console.log(`[MSG] From ${chatId}: ${text.substring(0, 50)}`);
+
   // Store chat ID for check-ins
   if (!knownChatId) {
     knownChatId = chatId;
@@ -320,11 +322,13 @@ async function handleMessage(update) {
     if (logData.sport === 'no') memory.streaks.sport_days = 0;
   }
 
-  // Get response from Claude
+  // Get response from AI
   try {
+    console.log('[AI] Calling DeepSeek/Claude...');
     const sys  = getSystemPrompt(memory);
     const msgs = [{ role: 'user', content: text }];
     const resp = await callAI(msgs, sys);
+    console.log('[AI] Got response, sending...');
     await sendMessage(chatId, resp);
 
     // Save updated memory back to Supabase
