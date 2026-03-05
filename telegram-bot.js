@@ -510,6 +510,7 @@ async function sendCheckIn(slotKey) {
 async function poll() {
   try {
     const res = await getUpdates(lastUpdateId + 1);
+    if (!res.ok) console.error('Poll failed:', JSON.stringify(res));
     if (res.ok && Array.isArray(res.result)) {
       for (const update of res.result) {
         if (update.update_id > lastUpdateId) {
@@ -549,10 +550,16 @@ if (!CLAUDE_API_KEY && !DEEPSEEK_API_KEY) {
   console.warn('');
 }
 
-// Start polling
-poll();
-
-// Schedule checker every 30s
-setInterval(checkSchedule, 30000);
-
-console.log('Jarvisphine Telegram bot is online. Listening for messages...');
+// Delete any webhook and start polling
+async function start() {
+  try {
+    const r = await apiPost(`${TELEGRAM_API}/deleteWebhook`, {});
+    console.log('Webhook cleared:', r.description || 'ok');
+  } catch (e) {
+    console.log('Webhook clear failed (ok to ignore):', e.message);
+  }
+  poll();
+  setInterval(checkSchedule, 30000);
+  console.log('Jarvisphine Telegram bot is online. Listening for messages...');
+}
+start();
