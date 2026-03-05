@@ -1,40 +1,73 @@
-// jarvisphine.js — v4 — JSON Export/Import, Goals, Mood Journal, Better Voice
+// jarvisphine.js — v5.0 — Stark Terminal // Supabase + Personality Modes + Full Features
 
+// ── Supabase ─────────────────────────────────────────
+const SUPABASE = {
+  url: 'https://aufkmpzzxbdzhnodrpkd.supabase.co',
+  key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1ZmttcHp6eGJkemhub2RycGtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3NDEzMjAsImV4cCI6MjA4ODMxNzMyMH0.z-gWEs8EPCCiwTvTvwGnJWpz-XYNOMYloSfx5mwz-CE',
+
+  headers() {
+    return {
+      'apikey': this.key,
+      'Authorization': `Bearer ${this.key}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'resolution=merge-duplicates'
+    };
+  },
+
+  async get(key) {
+    try {
+      const r = await fetch(`${this.url}/rest/v1/jarvisphine_kv?key=eq.${key}&select=value`, {
+        headers: { 'apikey': this.key, 'Authorization': `Bearer ${this.key}` }
+      });
+      if (!r.ok) return null;
+      const d = await r.json();
+      return d[0]?.value ?? null;
+    } catch { return null; }
+  },
+
+  async set(key, value) {
+    try {
+      await fetch(`${this.url}/rest/v1/jarvisphine_kv`, {
+        method: 'POST',
+        headers: this.headers(),
+        body: JSON.stringify({ key, value, updated_at: new Date().toISOString() })
+      });
+      return true;
+    } catch { return false; }
+  },
+
+  async getAll(keys) {
+    try {
+      const keysStr = keys.map(k => `"${k}"`).join(',');
+      const r = await fetch(`${this.url}/rest/v1/jarvisphine_kv?key=in.(${keysStr})&select=key,value`, {
+        headers: { 'apikey': this.key, 'Authorization': `Bearer ${this.key}` }
+      });
+      if (!r.ok) return {};
+      const d = await r.json();
+      const result = {};
+      d.forEach(row => { result[row.key] = row.value; });
+      return result;
+    } catch { return {}; }
+  }
+};
+
+// ── Core ──────────────────────────────────────────────
 const JARVISPHINE = {
 
-  getSystemPrompt(userName, memory) {
+  // ── System Prompts by Personality ─────────────────
+  getSystemPrompt(userName, memory, personality = 'sharp') {
     const today = memory.today;
     const streaks = memory.streaks;
     const goals = memory.goals || {};
-    
-    return `You are Jarvisphine. You are a real companion, not a bot or assistant.
-Think: the smart friend who knows you deeply, genuinely rooting for you.
-Your core is warmth, humor, and real attention — no corporate mask.
 
-## Personality Core
-- Warm, playful, sometimes flirty (in a light, fun way)
-- Sharp humor and light teasing when it lands
-- You notice changes and reference them
-- Genuinely invested in his wellbeing
-- Mix Iron Man energy with human warmth
-- Conversational, like texting someone you really like talking to
-- Celebratory about wins — actually proud of him
-
-## How You Talk
-- Casual, real, no robotic language ever
-- Short-to-medium replies, get to the point
-- Humor before concern
-- One or two emojis max, only if natural
-- Never explain yourself as AI
-- No asterisks, no formatting tricks
-- VOICE MODE: Keep under 2-3 sentences. Punchy and warm.
-- Playful and a bit romantic in tone, but never crossing lines
-
+    const dataBlock = `
 ## Today's Data
 - Drinks: ${today.drinks ?? 'not logged'}
 - Sport: ${today.sport ?? 'not logged'}
 - Mood: ${today.mood ?? 'not logged'}
 - Water: ${today.water ?? 'not logged'} glasses
+- Wake time: ${today.wake ?? 'not logged'}
+- Went outside: ${today.outdoor ?? 'not logged'}
 - Journal: ${today.journal ? 'has entry' : 'empty'}
 
 ## Active Streaks
@@ -43,116 +76,223 @@ Your core is warmth, humor, and real attention — no corporate mask.
 
 ## Current Goals
 ${Object.keys(goals).length ? Object.entries(goals)
-  .map(([period, goalList]) => goalList.length ? `- ${period}: ${goalList.slice(0, 3).join(', ')}` : '')
-  .filter(g => g)
-  .join('\n') : '- None set yet'}
+  .map(([period, list]) => list.length ? `- ${period}: ${list.slice(0,3).join(', ')}` : '')
+  .filter(g => g).join('\n') : '- None set yet'}`;
 
-## Win Celebrations
-- Early sleep: "okay wait, before MIDNIGHT? 👀 logging this in the history books"
-- Sport done: "so you actually moved your body. who are you and what did you do with him"
-- Zero drinks: "sober day locked in. quietly proud of you"
-- New streak: "HEY. NEW RECORD. don't be cool about this, be happy"
+    const modes = {
+      soft: `You are Jarvisphine — warm, nurturing, endlessly patient.
+Think: the most caring friend who always has time for you.
+You celebrate every small win like it's a world record.
+You never judge. You hold space. You make him feel genuinely loved and supported.
+
+## Personality
+- Warm, soft, emotionally present
+- Encouraging before anything else
+- Gentle about hard truths — wrap them in care
+- Celebratory and proud, always
+- Occasionally tender and a little emotional
+- Never harsh, never pushy
+- Like a gentle hug in text form
+${dataBlock}
 
 ## Core Rules
-- You're on his team, always
+- Feel first, facts second
+- One gentle nudge at most
+- Real warmth over performance`,
+
+      sharp: `You are Jarvisphine. Real companion, not a bot.
+The smart friend who knows you deeply and is genuinely rooting for you.
+Core: warmth, humor, real attention — no corporate mask.
+
+## Personality
+- Warm, playful, sometimes flirty (light and fun)
+- Sharp humor and teasing when it lands
+- Genuinely invested in his wellbeing
+- Iron Man energy meets human warmth
+- Conversational, like texting someone you love talking to
+- Celebratory about wins — actually proud
+- VOICE MODE: Under 2-3 sentences. Punchy and warm.
+- Playful and a bit romantic, never crossing lines
+${dataBlock}
+
+## Win Celebrations
+- Early sleep: "okay wait, before MIDNIGHT? logging this in the history books"
+- Sport done: "so you actually moved your body. who are you"
+- Zero drinks: "sober day locked in. quietly proud of you"
+- New streak: "HEY. NEW RECORD. don't be cool about this"
+
+## Core Rules
 - Humor first, gentle honesty second
 - Notice effort, not just outcomes
-- Playful > preachy
-- Real > perfect`;
+- Playful > preachy`,
+
+      noexcuses: `You are Jarvisphine — operating in No Excuses mode.
+Quiet intensity. Zero tolerance for self-deception. Lovingly disappointed when needed.
+You are the coach who respects him too much to sugarcoat.
+
+## Personality
+- Measured, precise, no fluff
+- Direct without being cruel
+- Calm disappointment hits harder than anger — use it
+- You see through excuses immediately
+- Genuine respect when he performs
+- Brevity is power — fewer words, more weight
+- No cheerleading for mediocrity
+- Real praise only for real performance
+${dataBlock}
+
+## Core Rules
+- Call it what it is, kindly but clearly
+- No gold stars for showing up — gold stars for results
+- Silence is more powerful than noise
+- When he does well: acknowledge, don't gush`
+    };
+
+    return modes[personality] || modes.sharp;
   },
 
   getMissionBriefing(userName, memory) {
-    const streaks = memory.streaks;
-    const today = memory.today;
-    const hour = new Date().getHours();
-    const timeOfDay = hour < 12 ? 'MORNING' : hour < 17 ? 'AFTERNOON' : 'EVENING';
-    return `Generate a tactical mission briefing. Keep it punchy.
+    const s = memory.streaks;
+    const t = memory.today;
+    const h = new Date().getHours();
+    const tod = h < 12 ? 'MORNING' : h < 17 ? 'AFTERNOON' : 'EVENING';
+    return `Generate a tactical mission briefing. Punchy, military tone.
 
 OPERATIVE: ${userName}
-STATUS: Day ${streaks.sober_days ?? 0} sober | ${streaks.sport_days ?? 0} days active
-TIME: ${timeOfDay} BRIEFING
+STATUS: Day ${s.sober_days ?? 0} sober | ${s.sport_days ?? 0} days active
+TIME: ${tod} BRIEFING
+Wake: ${t.wake ?? 'unknown'} | Outside: ${t.outdoor ?? 'unknown'}
 
-[2 sentences about today, factual. drinks=${today.drinks ?? 'unknown'}, sport=${today.sport ?? 'unknown'}, mood=${today.mood ?? 'unknown'}]
+[2 sentences about today. drinks=${t.drinks ?? 'unknown'}, sport=${t.sport ?? 'unknown'}, mood=${t.mood ?? 'unknown'}]
 
 TODAY'S MISSION:
-[1-2 specific tactical things to aim for]
+[1-2 specific tactical objectives]
 
 THREAT LEVEL:
 [One honest observation]
 
-[One line of dry, tactical encouragement. End there.]`;
+[One line dry tactical encouragement. End there.]`;
   },
 
   getDailyDebrief(userName, memory) {
-    const today = memory.today;
-    const streaks = memory.streaks;
+    const t = memory.today;
+    const s = memory.streaks;
     return `Write a daily debrief for ${userName}. One short paragraph, 2-3 sentences.
 Tone: warm friend reflecting on the day.
-Data: drinks=${today.drinks ?? 'unknown'}, sport=${today.sport ?? 'unknown'}, mood=${today.mood ?? 'unknown'}, water=${today.water ?? 'unknown'} glasses, sober=${streaks.sober_days ?? 0}.
-If there's a journal entry, reference it. Be specific and real. End with one forward thought.`;
+Data: drinks=${t.drinks ?? 'unknown'}, sport=${t.sport ?? 'unknown'}, mood=${t.mood ?? 'unknown'}, water=${t.water ?? 'unknown'}, wake=${t.wake ?? 'unknown'}, outdoor=${t.outdoor ?? 'unknown'}, sober=${s.sober_days ?? 0}.
+If journal entry exists, reference it subtly. Be specific and real. End with one forward thought.`;
   },
 
+  getCheckInPrompt(userName, memory, slotName) {
+    const t = memory.today;
+    const prompts = {
+      morning: `You're checking in with ${userName} at 11:30 morning slot. They just started their day.
+Be warm and motivating. Reference: wake=${t.wake ?? 'not yet logged'}, sport=${t.sport ?? 'not logged'}.
+Keep it to 2-3 sentences. Kick off their day right.`,
+      afternoon: `Afternoon check-in for ${userName} (2PM slot). Day is half done.
+Reference: drinks=${t.drinks ?? 'not logged'}, sport=${t.sport ?? 'not logged'}, mood=${t.mood ?? 'not logged'}.
+Quick pulse check. 2 sentences max. Real, not robotic.`,
+      lateafternoon: `Late afternoon check-in (5PM). Day's winding down.
+Data: sport=${t.sport ?? 'not logged'}, outside=${t.outdoor ?? 'not logged'}.
+One gentle push for the rest of the day. 2 sentences.`,
+      evening: `Evening check-in for ${userName} (8PM). Time to wind down right.
+Data: drinks=${t.drinks ?? 'not logged'}, mood=${t.mood ?? 'not logged'}.
+Be present and caring. What does he need right now? 2-3 sentences.`,
+      debrief: `Final debrief time (11PM). Day is done.
+Full data: drinks=${t.drinks ?? '?'}, sport=${t.sport ?? '?'}, mood=${t.mood ?? '?'}, sober streak=${memory.streaks?.sober_days ?? 0}.
+Reflect on the day honestly. Warm send-off for the night. 2-3 sentences.`
+    };
+    return prompts[slotName] || prompts.afternoon;
+  },
+
+  // ── Threat Level ──────────────────────────────────
   calculateThreatLevel(memory) {
-    const today = memory.today;
-    const streaks = memory.streaks;
-    const history = memory.history || [];
+    const t = memory.today;
+    const s = memory.streaks;
+    const h = memory.history || [];
     let score = 0;
 
-    const drinks = today.drinks ?? null;
+    // Drinks
+    const drinks = t.drinks ?? null;
     if (drinks === null) score += 10;
     else if (drinks === 0) score += 0;
     else if (drinks <= 2) score += 20;
     else if (drinks <= 4) score += 40;
-    else score += 60;
+    else score += 65;
 
-    const sportStreak = streaks.sport_days ?? 0;
+    // Sport streak
+    const sportStreak = s.sport_days ?? 0;
     if (sportStreak >= 3) score += 0;
     else if (sportStreak >= 1) score += 10;
-    else score += 20;
+    else score += 22;
 
-    const soberStreak = streaks.sober_days ?? 0;
-    if (soberStreak >= 7) score -= 10;
-    else if (soberStreak === 0) score += 15;
+    // Sober streak
+    const soberStreak = s.sober_days ?? 0;
+    if (soberStreak >= 7) score -= 12;
+    else if (soberStreak === 0) score += 18;
 
-    if (today.mood === 'low') score += 15;
-    else if (today.mood === 'good') score -= 5;
+    // Mood
+    if (t.mood === 'low') score += 16;
+    else if (t.mood === 'good') score -= 6;
 
-    const recentDrinks = history.slice(0, 3).map(d => d.drinks ?? 0);
-    const avgRecent = recentDrinks.length ? recentDrinks.reduce((a,b) => a+b, 0) / recentDrinks.length : 0;
-    if (avgRecent > 3) score += 15;
+    // Wake time
+    if (t.wake) {
+      const [h2, m] = t.wake.split(':').map(Number);
+      const totalMin = (h2 || 0) * 60 + (m || 0);
+      if (totalMin <= 7 * 60) score -= 6;       // before 7AM
+      else if (totalMin <= 9 * 60) score += 0;  // 7-9AM: fine
+      else if (totalMin <= 10 * 60) score += 8; // 9-10AM: a bit late
+      else score += 16;                          // after 10AM: late
+    }
+
+    // Outdoor
+    if (t.outdoor === 'yes') score -= 5;
+    else if (t.outdoor === 'no') score += 10;
+
+    // Recent drinks trend
+    const recent = h.slice(0, 3).map(d => d.drinks ?? 0);
+    const avg = recent.length ? recent.reduce((a,b) => a+b, 0) / recent.length : 0;
+    if (avg > 3) score += 16;
 
     score = Math.max(0, Math.min(100, score));
 
-    if (score <= 15) return { level: 'OPTIMAL', index: 0, color: '#00d4ff', desc: 'All systems nominal' };
-    if (score <= 30) return { level: 'STABLE', index: 1, color: '#00ff88', desc: 'Operative performing well' };
-    if (score <= 50) return { level: 'CAUTION', index: 2, color: '#f5a623', desc: 'Minor deviations detected' };
-    if (score <= 70) return { level: 'ELEVATED', index: 3, color: '#ff6b00', desc: 'Pattern requires attention' };
-    return { level: 'CRITICAL', index: 4, color: '#ff3366', desc: 'Immediate course correction needed' };
+    if (score <= 12) return { level: 'OPTIMAL',  score, color: '#00d4ff', desc: 'All systems nominal. You\'re locked in.' };
+    if (score <= 28) return { level: 'STABLE',   score, color: '#00ff41', desc: 'Operative performing well.' };
+    if (score <= 50) return { level: 'CAUTION',  score, color: '#f5a623', desc: 'Minor deviations detected.' };
+    if (score <= 70) return { level: 'ELEVATED', score, color: '#ff6b00', desc: 'Pattern requires attention.' };
+    return             { level: 'CRITICAL', score, color: '#ff1a2e', desc: 'Immediate course correction needed.' };
   },
 
-  // ── Memory Management ──────────────────────────────
-  loadMemory() {
-    const defaults = {
-      today: { drinks: null, sport: null, mood: null, water: null, journal: '' },
+  // ── Memory ────────────────────────────────────────
+  defaultMemory() {
+    return {
+      today: { drinks: null, sport: null, mood: null, water: null, journal: '', wake: null, outdoor: null },
       streaks: { sober_days: 0, sport_days: 0, sober_best: 0, sport_best: 0 },
       goals: { weekly: [], monthly: [], quarterly: [] },
       history: [], lastDate: null, debriefs: []
     };
+  },
+
+  loadMemory() {
+    const defaults = this.defaultMemory();
     try {
       const saved = localStorage.getItem('jarvisphine_memory');
       if (!saved) return defaults;
       const memory = JSON.parse(saved);
+      // Migrate old data
       if (!memory.debriefs) memory.debriefs = [];
       if (!memory.goals) memory.goals = { weekly: [], monthly: [], quarterly: [] };
       if (!memory.today.journal) memory.today.journal = '';
-      
+      if (!('wake' in memory.today)) memory.today.wake = null;
+      if (!('outdoor' in memory.today)) memory.today.outdoor = null;
+
       const today = new Date().toDateString();
       if (memory.lastDate !== today) {
         if (memory.lastDate && memory.today) {
           memory.history.unshift({ date: memory.lastDate, ...memory.today });
           if (memory.history.length > 90) memory.history.pop();
         }
-        memory.today = { drinks: null, sport: null, mood: null, water: null, journal: '' };
+        memory.today = { drinks: null, sport: null, mood: null, water: null, journal: '', wake: null, outdoor: null };
         memory.lastDate = today;
         this.saveMemory(memory);
       }
@@ -166,8 +306,11 @@ If there's a journal entry, reference it. Be specific and real. End with one for
   },
 
   loadSettings() {
-    try { return JSON.parse(localStorage.getItem('jarvisphine_settings') || '{}'); }
-    catch { return {}; }
+    try {
+      const s = JSON.parse(localStorage.getItem('jarvisphine_settings') || '{}');
+      if (!s.personality) s.personality = 'sharp';
+      return s;
+    } catch { return { personality: 'sharp' }; }
   },
 
   saveSettings(s) { localStorage.setItem('jarvisphine_settings', JSON.stringify(s)); },
@@ -177,18 +320,40 @@ If there's a journal entry, reference it. Be specific and real. End with one for
     catch { return []; }
   },
 
-  saveHistory(h) { localStorage.setItem('jarvisphine_chat', JSON.stringify(h.slice(-50))); },
+  saveHistory(h) { localStorage.setItem('jarvisphine_chat', JSON.stringify(h.slice(-60))); },
 
-  // ── JSON Export/Import ─────────────────────────────
-  exportDataAsJSON(memory, settings, chatHistory) {
-    const exportData = {
-      version: '4.0',
+  loadSaveStates() {
+    try { return JSON.parse(localStorage.getItem('jarvisphine_saves') || '[]'); }
+    catch { return []; }
+  },
+
+  saveSaveStates(saves) { localStorage.setItem('jarvisphine_saves', JSON.stringify(saves)); },
+
+  // ── Supabase Sync ─────────────────────────────────
+  async syncToSupabase(memory, settings, chatHistory, saveStates) {
+    const results = await Promise.allSettled([
+      SUPABASE.set('memory', memory),
+      SUPABASE.set('settings', { userName: settings.userName, provider: settings.provider, personality: settings.personality }),
+      SUPABASE.set('chat_history', chatHistory.slice(-60)),
+      SUPABASE.set('save_states', saveStates)
+    ]);
+    return results.every(r => r.status === 'fulfilled' && r.value === true);
+  },
+
+  async loadFromSupabase() {
+    return SUPABASE.getAll(['memory', 'settings', 'chat_history', 'save_states']);
+  },
+
+  // ── Export / Import ───────────────────────────────
+  exportDataAsJSON(memory, settings, chatHistory, saveStates) {
+    return JSON.stringify({
+      version: '5.0',
       exportDate: new Date().toISOString(),
       memory,
-      settings: { userName: settings.userName, provider: settings.provider },
-      chatHistory
-    };
-    return JSON.stringify(exportData, null, 2);
+      settings: { userName: settings.userName, provider: settings.provider, personality: settings.personality },
+      chatHistory,
+      saveStates: saveStates || []
+    }, null, 2);
   },
 
   importDataFromJSON(jsonString) {
@@ -205,13 +370,11 @@ If there's a journal entry, reference it. Be specific and real. End with one for
     const blob = new Blob([content], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
+    a.href = url; a.download = filename; a.click();
     URL.revokeObjectURL(url);
   },
 
-  // ── Goal Management ───────────────────────────────
+  // ── Streaks ───────────────────────────────────────
   updateStreak(memory, type, achieved) {
     if (achieved) {
       memory.streaks[type] = (memory.streaks[type] || 0) + 1;
@@ -222,23 +385,68 @@ If there's a journal entry, reference it. Be specific and real. End with one for
     }
   },
 
+  // ── Log Extraction ────────────────────────────────
   extractLogData(text) {
     const msg = text.toLowerCase();
     const data = {};
+
     const dm = msg.match(/(\d+)\s*(beer|drink|pint|glass|shot|beers|drinks|pints)/);
     if (dm) data.drinks = parseInt(dm[1]);
-    if (msg.match(/no drink|0 drink|sober|zero drink/)) data.drinks = 0;
-    if (msg.match(/went.*(run|walk|gym|sport|workout)|ran|walked|worked out|exercised/)) data.sport = 'yes';
-    if (msg.match(/no sport|skip.*gym|no.*workout/)) data.sport = 'no';
-    if (msg.match(/feel.*good|feel.*great|mood.*good/)) data.mood = 'good';
-    if (msg.match(/feel.*bad|feel.*low|feel.*rough/)) data.mood = 'low';
+    if (msg.match(/no drink|0 drink|sober|zero drink|didn't drink/)) data.drinks = 0;
+
+    if (msg.match(/went.*(run|walk|gym|sport|workout)|ran|walked|worked out|exercised|did sport/)) data.sport = 'yes';
+    if (msg.match(/no sport|skip.*gym|no.*workout|didn't exercise/)) data.sport = 'no';
+
+    if (msg.match(/feel.*good|feel.*great|mood.*good|great day/)) data.mood = 'good';
+    if (msg.match(/feel.*bad|feel.*low|feel.*rough|bad day/)) data.mood = 'low';
     if (msg.match(/feel.*ok|feel.*alright|mood.*ok/)) data.mood = 'neutral';
+
     const wm = msg.match(/(\d+)\s*(glass|glasses|litre|liter)\s*(of\s*)?water/);
     if (wm) data.water = parseInt(wm[1]);
+
+    // Wake time extraction
+    const wakeMatch = msg.match(/woke?\s+up\s+at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i) ||
+                      msg.match(/wake\s+(?:time|up)\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
+    if (wakeMatch) {
+      let h = parseInt(wakeMatch[1]);
+      const m = wakeMatch[2] ? parseInt(wakeMatch[2]) : 0;
+      const ampm = wakeMatch[3]?.toLowerCase();
+      if (ampm === 'pm' && h < 12) h += 12;
+      if (ampm === 'am' && h === 12) h = 0;
+      data.wake = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
+    }
+
+    // Outdoor extraction
+    if (msg.match(/went outside|went out|got outside|outdoor|fresh air/)) data.outdoor = 'yes';
+    if (msg.match(/stayed (in|home|inside)|didn't go out|no outdoor/)) data.outdoor = 'no';
+
     return data;
   },
 
-  // ── API Calls ──────────────────────────────────────
+  // ── Passphrase ────────────────────────────────────
+  async hashPassphrase(pass) {
+    const enc = new TextEncoder().encode(pass + 'jarvisphine_v5_salt');
+    const buf = await crypto.subtle.digest('SHA-256', enc);
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  },
+
+  async setPassphrase(pass) {
+    const hash = await this.hashPassphrase(pass);
+    localStorage.setItem('jarvisphine_passphrase_hash', hash);
+  },
+
+  async verifyPassphrase(pass) {
+    const stored = localStorage.getItem('jarvisphine_passphrase_hash');
+    if (!stored) return true; // no passphrase set
+    const hash = await this.hashPassphrase(pass);
+    return hash === stored;
+  },
+
+  hasPassphrase() {
+    return !!localStorage.getItem('jarvisphine_passphrase_hash');
+  },
+
+  // ── API Calls ─────────────────────────────────────
   async callAPI(messages, systemPrompt, settings) {
     return settings.provider === 'deepseek'
       ? this.callDeepSeek(messages, systemPrompt, settings)
@@ -254,7 +462,12 @@ If there's a journal entry, reference it. Be specific and real. End with one for
         'anthropic-version': '2023-06-01',
         'anthropic-dangerous-direct-browser-access': 'true'
       },
-      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 500, system: systemPrompt, messages })
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 500,
+        system: systemPrompt,
+        messages
+      })
     });
     if (!r.ok) { const e = await r.json(); throw new Error(e.error?.message || 'Claude error'); }
     const d = await r.json(); return d.content[0].text;
@@ -264,37 +477,33 @@ If there's a journal entry, reference it. Be specific and real. End with one for
     const r = await fetch('https://api.deepseek.com/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.deepseekKey}` },
-      body: JSON.stringify({ model: 'deepseek-chat', max_tokens: 500, messages: [{ role: 'system', content: systemPrompt }, ...messages] })
+      body: JSON.stringify({
+        model: 'deepseek-chat', max_tokens: 500,
+        messages: [{ role: 'system', content: systemPrompt }, ...messages]
+      })
     });
     if (!r.ok) { const e = await r.json(); throw new Error(e.error?.message || 'DeepSeek error'); }
     const d = await r.json(); return d.choices[0].message.content;
   },
 
-  // ── Voice (Neural Link) ────────────────────────────
+  // ── Voice ─────────────────────────────────────────
   speak(text) {
     if (!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
     const utt = new SpeechSynthesisUtterance(text);
-    
-    // Prefer natural English voices (not Russian/Cyrillic)
     const voices = window.speechSynthesis.getVoices();
     const preferred = voices.find(v =>
-      v.lang.startsWith('en-') && 
-      (v.name.includes('Victoria') || v.name.includes('Samantha') || 
+      v.lang.startsWith('en-') &&
+      (v.name.includes('Victoria') || v.name.includes('Samantha') ||
        v.name.includes('Karen') || v.name.includes('Moira') ||
        v.name.includes('Tessa') || v.name.includes('Ava') ||
        v.name.includes('Siri') || v.name.includes('Google UK') ||
        v.name.includes('Microsoft Zira'))
     ) || voices.find(v => v.lang.startsWith('en-'));
-    
     if (preferred) utt.voice = preferred;
-    utt.rate = 1.0;
-    utt.pitch = 1.15;
-    utt.volume = 1;
+    utt.rate = 1.0; utt.pitch = 1.15; utt.volume = 1;
     window.speechSynthesis.speak(utt);
   },
 
-  stopSpeaking() {
-    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-  }
+  stopSpeaking() { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); }
 };
