@@ -109,6 +109,23 @@ async function sendMessage(chatId, text) {
   });
 }
 
+async function sendMessageWithKeyboard(chatId, text, keyboard) {
+  const url = `${TELEGRAM_API}/sendMessage`;
+  return apiPost(url, {
+    chat_id: chatId,
+    text,
+    parse_mode: 'HTML',
+    reply_markup: { inline_keyboard: keyboard }
+  });
+}
+
+async function answerCallback(callbackQueryId, text) {
+  return apiPost(`${TELEGRAM_API}/answerCallbackQuery`, {
+    callback_query_id: callbackQueryId,
+    text: text || ''
+  });
+}
+
 async function getUpdates(offset) {
   const url = `${TELEGRAM_API}/getUpdates?offset=${offset}&timeout=10&limit=10`;
   const parsed = new URL(url);
@@ -284,6 +301,14 @@ async function handleMessage(update) {
     return;
   }
 
+  if (text === '/log') {
+    await sendMessageWithKeyboard(chatId, '<b>// QUICK LOG</b>\n\nWhat do you want to log?', [
+      [{ text: '🍺 Drinks', callback_data: 'log_menu:drinks' }, { text: '🏃 Sport', callback_data: 'log_menu:sport' }],
+      [{ text: '😊 Mood', callback_data: 'log_menu:mood' }, { text: '💧 Water', callback_data: 'log_menu:water' }]
+    ]);
+    return;
+  }
+
   // Load current memory from Supabase
   let memory = await DB.get('memory');
   if (!memory) {
@@ -339,6 +364,107 @@ async function handleMessage(update) {
   }
 }
 
+// ── Callback Query Handler (button taps) ──────────────
+async function handleCallback(update) {
+  const cb     = update.callback_query;
+  const chatId = cb.message.chat.id;
+  const data   = cb.data;
+
+  if (!knownChatId) knownChatId = chatId;
+
+  // Show sub-menu for a category
+  if (data.startsWith('log_menu:')) {
+    const category = data.split(':')[1];
+    await answerCallback(cb.id);
+    if (category === 'drinks') {
+      await sendMessageWithKeyboard(chatId, '🍺 <b>How many drinks today?</b>', [
+        [
+          { text: '0 — sober', callback_data: 'log:drinks:0' },
+          { text: '1', callback_data: 'log:drinks:1' },
+          { text: '2', callback_data: 'log:drinks:2' }
+        ],
+        [
+          { text: '3', callback_data: 'log:drinks:3' },
+          { text: '4', callback_data: 'log:drinks:4' },
+          { text: '5+', callback_data: 'log:drinks:5' }
+        ]
+      ]);
+    } else if (category === 'sport') {
+      await sendMessageWithKeyboard(chatId, '🏃 <b>Did you do sport today?</b>', [
+        [{ text: '✅ Yes', callback_data: 'log:sport:yes' }, { text: '❌ No', callback_data: 'log:sport:no' }]
+      ]);
+    } else if (category === 'mood') {
+      await sendMessageWithKeyboard(chatId, '😊 <b>How are you feeling?</b>', [
+        [
+          { text: '😄 Great', callback_data: 'log:mood:great' },
+          { text: '🙂 Good', callback_data: 'log:mood:good' },
+          { text: '😐 Okay', callback_data: 'log:mood:okay' }
+        ],
+        [
+          { text: '😔 Low', callback_data: 'log:mood:low' },
+          { text: '😤 Stressed', callback_data: 'log:mood:stressed' }
+        ]
+      ]);
+    } else if (category === 'water') {
+      await sendMessageWithKeyboard(chatId, '💧 <b>Glasses of water today?</b>', [
+        [
+          { text: '1', callback_data: 'log:water:1' },
+          { text: '2', callback_data: 'log:water:2' },
+          { text: '4', callback_data: 'log:water:4' },
+          { text: '6', callback_data: 'log:water:6' },
+          { text: '8+', callback_data: 'log:water:8' }
+        ]
+      ]);
+    }
+    return;
+  }
+
+  // Save a logged value
+  if (data.startsWith('log:')) {
+    const [, field, value] = data.split(':');
+    const memory = await DB.get('memory') || {
+      today: { drinks: null, sport: null, mood: null, water: null, journal: '', wake: null, outdoor: null },
+      streaks: { sober_days: 0, sport_days: 0, sober_best: 0, sport_best: 0 },
+      history: [], lastDate: null, debriefs: []
+    };
+
+    const today = new Date().toDateString();
+    if (memory.lastDate !== today) {
+      if (memory.lastDate && memory.today) {
+        if (!memory.history) memory.history = [];
+        memory.history.unshift({ date: memory.lastDate, ...memory.today });
+        if (memory.history.length > 90) memory.history.pop();
+      }
+      memory.today = { drinks: null, sport: null, mood: null, water: null, journal: '', wake: null, outdoor: null };
+      memory.lastDate = today;
+    }
+
+    const parsed = isNaN(value) ? value : Number(value);
+    memory.today[field] = parsed;
+
+    // Update streaks for drinks/sport
+    if (field === 'drinks') {
+      const sober = parsed === 0;
+      memory.streaks.sober_days = sober ? (memory.streaks.sober_days || 0) + 1 : 0;
+      if (memory.streaks.sober_days > (memory.streaks.sober_best || 0)) memory.streaks.sober_best = memory.streaks.sober_days;
+    }
+    if (field === 'sport' && parsed === 'yes') {
+      memory.streaks.sport_days = (memory.streaks.sport_days || 0) + 1;
+      if (memory.streaks.sport_days > (memory.streaks.sport_best || 0)) memory.streaks.sport_best = memory.streaks.sport_days;
+    }
+    if (field === 'sport' && parsed === 'no') memory.streaks.sport_days = 0;
+
+    await DB.set('memory', memory);
+    await answerCallback(cb.id, `✅ ${field} logged!`);
+
+    const labels = { drinks: `🍺 ${parsed} drink${parsed === 1 ? '' : 's'}`, sport: parsed === 'yes' ? '🏃 Sport: done!' : '🛋️ Sport: skipped', mood: `😊 Mood: ${parsed}`, water: `💧 ${parsed} glasses` };
+    await sendMessage(chatId, `<b>Logged:</b> ${labels[field] || `${field}: ${parsed}`}\n\nStreak — Sober: ${memory.streaks.sober_days}d · Sport: ${memory.streaks.sport_days}d`);
+    return;
+  }
+
+  await answerCallback(cb.id);
+}
+
 // ── Scheduler ─────────────────────────────────────────
 let lastCheckinDate = '';
 
@@ -353,7 +479,7 @@ function checkSchedule() {
   }
 
   if (!knownChatId) return;
-  if (!CLAUDE_API_KEY) return;
+  if (!CLAUDE_API_KEY && !DEEPSEEK_API_KEY) return;
 
   const nowMin = now.getHours() * 60 + now.getMinutes();
 
@@ -388,7 +514,11 @@ async function poll() {
       for (const update of res.result) {
         if (update.update_id > lastUpdateId) {
           lastUpdateId = update.update_id;
-          await handleMessage(update);
+          if (update.callback_query) {
+            await handleCallback(update);
+          } else {
+            await handleMessage(update);
+          }
         }
       }
     }
