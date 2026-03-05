@@ -119,6 +119,22 @@ async function sendMessageWithKeyboard(chatId, text, keyboard) {
   });
 }
 
+async function sendMainMenu(chatId) {
+  const url = `${TELEGRAM_API}/sendMessage`;
+  return apiPost(url, {
+    chat_id: chatId,
+    text: '<b>// JARVISPHINE MENU</b>\n\nWhat do you need?',
+    parse_mode: 'HTML',
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: '📊 Status', callback_data: 'menu:status' }, { text: '📝 Quick Log', callback_data: 'menu:log' }],
+        [{ text: '📅 Schedule', callback_data: 'menu:schedule' }, { text: '📖 Journal', callback_data: 'menu:journal' }],
+        [{ text: '💬 Just Talk', callback_data: 'menu:chat' }]
+      ]
+    }
+  });
+}
+
 async function answerCallback(callbackQueryId, text) {
   return apiPost(`${TELEGRAM_API}/answerCallbackQuery`, {
     callback_query_id: callbackQueryId,
@@ -288,7 +304,23 @@ async function handleMessage(update) {
 
   // Special commands
   if (text === '/start') {
-    await sendMessage(chatId, `<b>JARVISPHINE v5.0 ONLINE</b>\n\nI'm here. Talk to me — log your day, ask anything, I've got you.\n\nYour data syncs with the web app automatically.`);
+    // Set persistent bottom keyboard
+    await apiPost(`${TELEGRAM_API}/sendMessage`, {
+      chat_id: chatId,
+      text: '<b>JARVISPHINE v5.0 ONLINE</b>\n\nI\'m here. Talk to me — log your day, ask anything, I\'ve got you.\n\nYour data syncs with the web app automatically.',
+      parse_mode: 'HTML',
+      reply_markup: {
+        keyboard: [[{ text: '⚡ Menu' }]],
+        resize_keyboard: true,
+        persistent: true
+      }
+    });
+    await sendMainMenu(chatId);
+    return;
+  }
+
+  if (text === '/menu' || text === '⚡ Menu') {
+    await sendMainMenu(chatId);
     return;
   }
 
@@ -371,6 +403,32 @@ async function handleCallback(update) {
   const data   = cb.data;
 
   if (!knownChatId) knownChatId = chatId;
+
+  // Main menu buttons
+  if (data.startsWith('menu:')) {
+    const action = data.split(':')[1];
+    await answerCallback(cb.id);
+    if (action === 'status') {
+      // Trigger status the same way as /status command
+      const memory = await DB.get('memory');
+      const t = memory?.today || {};
+      const s = memory?.streaks || {};
+      const status = `<b>// STATUS REPORT</b>\n\nDrinks: ${t.drinks ?? 'not logged'}\nSport: ${t.sport ?? 'not logged'}\nMood: ${t.mood ?? 'not logged'}\nWake: ${t.wake ?? 'not logged'}\n\nSober streak: ${s.sober_days ?? 0} days\nSport streak: ${s.sport_days ?? 0} days`;
+      await sendMessage(chatId, status);
+    } else if (action === 'log') {
+      await sendMessageWithKeyboard(chatId, '<b>// QUICK LOG</b>\n\nWhat do you want to log?', [
+        [{ text: '🍺 Drinks', callback_data: 'log_menu:drinks' }, { text: '🏃 Sport', callback_data: 'log_menu:sport' }],
+        [{ text: '😊 Mood', callback_data: 'log_menu:mood' }, { text: '💧 Water', callback_data: 'log_menu:water' }]
+      ]);
+    } else if (action === 'schedule') {
+      await sendMessage(chatId, 'Tell me your schedule or ask about it — e.g. "what do I have today?"');
+    } else if (action === 'journal') {
+      await sendMessage(chatId, 'Go ahead — write whatever is on your mind.');
+    } else if (action === 'chat') {
+      await sendMessage(chatId, "I'm listening. What's up?");
+    }
+    return;
+  }
 
   // Show sub-menu for a category
   if (data.startsWith('log_menu:')) {
