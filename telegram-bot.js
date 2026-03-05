@@ -408,9 +408,9 @@ console.log('║  11:30 · 14:00 · 17:00 · 20:00 ·23:00║');
 console.log('╚══════════════════════════════════════╝');
 console.log('');
 
-if (!CLAUDE_API_KEY) {
-  console.warn('⚠ CLAUDE_API_KEY not set. Run with:');
-  console.warn('  CLAUDE_API_KEY=sk-ant-... node telegram-bot.js');
+if (!CLAUDE_API_KEY && !DEEPSEEK_API_KEY) {
+  console.warn('⚠ No AI key set. Run with:');
+  console.warn('  DEEPSEEK_API_KEY=sk-... node telegram-bot.js');
   console.warn('  (Bot will still receive messages but cannot respond with AI)');
   console.warn('');
 }
