@@ -276,7 +276,7 @@ async function handleMessage(update) {
   if (!msg || !msg.text) return;
 
   const chatId = msg.chat.id;
-  const text   = msg.text;
+  const text   = msg.text.split('@')[0].trim(); // strip @BotName suffix from commands
 
   console.log(`[MSG] From ${chatId}: ${text.substring(0, 50)}`);
 
