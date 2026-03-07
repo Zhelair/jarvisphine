@@ -1,6 +1,6 @@
-// telegram-bot.js — Jarvisphine v5.0 — Telegram Integration
-// Run: node telegram-bot.js
-// Or:  CLAUDE_API_KEY=sk-ant-... node telegram-bot.js
+// telegram-bot.js — Jarvisphine v6.0 — Telegram Integration
+// Run: TELEGRAM_TOKEN=xxx CLAUDE_API_KEY=sk-ant-... node telegram-bot.js
+// Or:  TELEGRAM_TOKEN=xxx DEEPSEEK_API_KEY=sk-... node telegram-bot.js
 
 const https  = require('https');
 const http   = require('http');
@@ -143,12 +143,27 @@ async function answerCallback(callbackQueryId, text) {
 }
 
 async function getUpdates(offset) {
-  const url = `${TELEGRAM_API}/getUpdates?offset=${offset}&timeout=10&limit=10`;
+  const url    = `${TELEGRAM_API}/getUpdates?offset=${offset}&timeout=25&limit=10`;
   const parsed = new URL(url);
-  return request(url, {
-    hostname: parsed.hostname,
-    path: parsed.pathname + parsed.search,
-    method: 'GET'
+  return new Promise((resolve, reject) => {
+    const mod  = https;
+    const opts = {
+      hostname: parsed.hostname,
+      path: parsed.pathname + parsed.search,
+      method: 'GET',
+      timeout: 30000 // 30s node-level timeout for long-polling
+    };
+    const req = mod.request(opts, res => {
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => {
+        try { resolve(JSON.parse(data)); }
+        catch { resolve(data); }
+      });
+    });
+    req.on('timeout', () => { req.destroy(); resolve({ ok: true, result: [] }); });
+    req.on('error', reject);
+    req.end();
   });
 }
 
@@ -230,16 +245,26 @@ function extractLogData(text) {
   if (msg.match(/went outside|went out|got outside|outdoor|fresh air/)) data.outdoor = 'yes';
   if (msg.match(/stayed (in|home|inside)|didn't go out/)) data.outdoor = 'no';
 
+  const sleepMatch = msg.match(/slept?\s+(?:for\s+)?(\d+\.?\d*)\s*(?:hours?|hrs?)/i) ||
+                     msg.match(/(\d+\.?\d*)\s*hours?\s+(?:of\s+)?sleep/i);
+  if (sleepMatch) data.sleep_hours = parseFloat(sleepMatch[1]);
+
+  const energyMatch = msg.match(/energy\s+(?:is\s+|level\s+)?(\d+)\s*(?:\/\s*10)?/i);
+  if (energyMatch) {
+    const e = parseInt(energyMatch[1]);
+    if (e >= 1 && e <= 10) data.energy = e;
+  }
+
   return data;
 }
 
 // ── System Prompt (Telegram version) ─────────────────
 function getSystemPrompt(memory) {
-  const t = memory?.today || {};
-  const s = memory?.streaks || {};
-  const personality = memory?.settings?.personality || 'sharp';
+  const t  = memory?.today   || {};
+  const s  = memory?.streaks || {};
+  const r  = t.morning_ritual || {};
 
-  const basePrompt = `You are Jarvisphine — real companion, not a bot.
+  return `You are Jarvisphine — real companion, not a bot.
 Sharp, warm, sometimes flirty. Like texting a smart friend who actually cares.
 SHORT replies only — this is Telegram. Max 2-3 sentences usually. Punchy.
 No asterisks. No formatting tricks. Real and casual.
@@ -250,13 +275,16 @@ No asterisks. No formatting tricks. Real and casual.
 - Mood: ${t.mood ?? 'not logged'}
 - Water: ${t.water ?? 'not logged'} glasses
 - Wake: ${t.wake ?? 'not logged'}
+- Sleep: ${t.sleep_hours != null ? t.sleep_hours + 'h' : 'not logged'}
+- Energy: ${t.energy != null ? t.energy + '/10' : 'not logged'}
 - Outside: ${t.outdoor ?? 'not logged'}
+- Today's plan: ${t.plan || 'none set'}
+- Morning ritual: stretch=${r.stretch ?? '?'}, shower=${r.shower ?? '?'}, breakfast=${r.breakfast ?? '?'}
 
 ## Streaks
-- Sober: ${s.sober_days ?? 0} days
-- Sport: ${s.sport_days ?? 0} days`;
-
-  return basePrompt;
+- Sober: ${s.sober_days ?? 0} days (best: ${s.sober_best ?? 0})
+- Sport: ${s.sport_days ?? 0} days (best: ${s.sport_best ?? 0})
+- Morning protocol: ${s.ritual_days ?? 0} days`;
 }
 
 // ── Scheduled check-in prompts ────────────────────────
@@ -326,9 +354,24 @@ async function handleMessage(update) {
 
   if (text === '/status') {
     const memory = await DB.get('memory');
-    const t = memory?.today || {};
+    const t = memory?.today   || {};
     const s = memory?.streaks || {};
-    const status = `<b>// STATUS REPORT</b>\n\nDrinks: ${t.drinks ?? 'not logged'}\nSport: ${t.sport ?? 'not logged'}\nMood: ${t.mood ?? 'not logged'}\nWake: ${t.wake ?? 'not logged'}\n\nSober streak: ${s.sober_days ?? 0} days\nSport streak: ${s.sport_days ?? 0} days`;
+    const r = t.morning_ritual || {};
+    const ritualStr = [
+      r.stretch    === 'yes' ? '🧘' : '—',
+      r.shower     === 'yes' ? '🚿' : '—',
+      r.breakfast  === 'yes' ? '🥗' : '—',
+      r.meditate   === 'yes' ? '🧠' : '—'
+    ].join(' ');
+    const status = `<b>// STATUS REPORT</b>\n\n` +
+      `Drinks: ${t.drinks ?? '?'}  |  Sport: ${t.sport ?? '?'}\n` +
+      `Mood: ${t.mood ?? '?'}  |  Wake: ${t.wake ?? '?'}\n` +
+      `Sleep: ${t.sleep_hours != null ? t.sleep_hours + 'h' : '?'}  |  Energy: ${t.energy != null ? t.energy + '/10' : '?'}\n` +
+      `Morning: ${ritualStr}\n` +
+      `Plan: ${t.plan || 'none set'}\n\n` +
+      `🧘 Sober: ${s.sober_days ?? 0} days (best: ${s.sober_best ?? 0})\n` +
+      `⚡ Sport: ${s.sport_days ?? 0} days (best: ${s.sport_best ?? 0})\n` +
+      `🌅 Protocol: ${s.ritual_days ?? 0} days`;
     await sendMessage(chatId, status);
     return;
   }
@@ -343,13 +386,26 @@ async function handleMessage(update) {
 
   // Load current memory from Supabase
   let memory = await DB.get('memory');
+  const defaultToday = () => ({
+    drinks: null, sport: null, mood: null, water: null,
+    journal: '', wake: null, outdoor: null,
+    sleep_hours: null, energy: null, plan: '',
+    morning_ritual: { stretch: null, shower: null, breakfast: null, meditate: null }
+  });
   if (!memory) {
     memory = {
-      today: { drinks: null, sport: null, mood: null, water: null, journal: '', wake: null, outdoor: null },
-      streaks: { sober_days: 0, sport_days: 0, sober_best: 0, sport_best: 0 },
+      today: defaultToday(),
+      streaks: { sober_days: 0, sport_days: 0, sober_best: 0, sport_best: 0, ritual_days: 0, ritual_best: 0 },
       history: [], lastDate: null, debriefs: []
     };
   }
+  // Migrate missing fields
+  if (!memory.today.morning_ritual) memory.today.morning_ritual = { stretch: null, shower: null, breakfast: null, meditate: null };
+  if (!('sleep_hours' in memory.today)) memory.today.sleep_hours = null;
+  if (!('energy'      in memory.today)) memory.today.energy      = null;
+  if (!('plan'        in memory.today)) memory.today.plan        = '';
+  if (!memory.streaks.ritual_days) memory.streaks.ritual_days = 0;
+  if (!memory.streaks.ritual_best) memory.streaks.ritual_best = 0;
 
   // Day rollover
   const today = new Date().toDateString();
@@ -359,7 +415,7 @@ async function handleMessage(update) {
       memory.history.unshift({ date: memory.lastDate, ...memory.today });
       if (memory.history.length > 90) memory.history.pop();
     }
-    memory.today = { drinks: null, sport: null, mood: null, water: null, journal: '', wake: null, outdoor: null };
+    memory.today = defaultToday();
     memory.lastDate = today;
   }
 
@@ -590,14 +646,14 @@ async function poll() {
 // ── Start ─────────────────────────────────────────────
 console.log('');
 console.log('╔══════════════════════════════════════╗');
-console.log('║   JARVISPHINE v5.0 — TELEGRAM BOT   ║');
+console.log('║   JARVISPHINE v6.0 — TELEGRAM BOT   ║');
 console.log('╠══════════════════════════════════════╣');
 console.log(`║  Bot: @Jarvisphine_bot               ║`);
 const aiStatus = DEEPSEEK_API_KEY ? 'DeepSeek: LOADED' : CLAUDE_API_KEY ? 'Claude:   LOADED' : 'NO AI KEY SET ←';
 console.log(`║  AI: ${aiStatus.padEnd(34)}║`);
 console.log('╠══════════════════════════════════════╣');
-console.log('║  Scheduled check-ins:                ║');
-console.log('║  11:30 · 14:00 · 17:00 · 20:00 ·23:00║');
+console.log('║  Check-ins: 11:30 14:00 17:00 20:00 ║');
+console.log('║  Daily debrief: 23:00                ║');
 console.log('╚══════════════════════════════════════╝');
 console.log('');
 

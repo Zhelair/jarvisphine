@@ -1,85 +1,16 @@
-// app.js — Jarvisphine v5.0 — Full feature set
+// app.js — Jarvisphine v6.0
 
 let currentScreen = 'chat';
-let chatHistory = [];
-let memory = {};
-let settings = {};
-let saveStates = [];
-let isTyping = false;
-let isRecording = false;
-let recognition = null;
-let neuralLinkActive = false;
-let syncTimeout = null;
-let checkinsSentToday = {};
-
-// ── Passphrase Lock ───────────────────────────────────
-async function initLockScreen() {
-  const lockScreen = document.getElementById('lockScreen');
-  const enterMode  = document.getElementById('lockEnterMode');
-  const setMode    = document.getElementById('lockSetMode');
-
-  if (!JARVISPHINE.hasPassphrase()) {
-    enterMode.style.display = 'none';
-    setMode.style.display   = 'flex';
-  } else {
-    enterMode.style.display = 'flex';
-    setMode.style.display   = 'none';
-  }
-
-  // Focus input
-  setTimeout(() => {
-    (JARVISPHINE.hasPassphrase()
-      ? document.getElementById('passphraseInput')
-      : document.getElementById('passphraseSetInput')
-    ).focus();
-  }, 300);
-
-  // Enter to unlock
-  document.getElementById('passphraseInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter') tryUnlock();
-  });
-
-  document.getElementById('unlockBtn').addEventListener('click', tryUnlock);
-  document.getElementById('setPassphraseBtn').addEventListener('click', trySetPassphrase);
-}
-
-async function tryUnlock() {
-  const input = document.getElementById('passphraseInput').value;
-  const errEl = document.getElementById('lockError');
-  if (!input) { errEl.textContent = '// PASSPHRASE REQUIRED'; return; }
-  const ok = await JARVISPHINE.verifyPassphrase(input);
-  if (ok) {
-    document.getElementById('lockScreen').classList.add('hidden');
-    startApp();
-  } else {
-    errEl.textContent = '// ACCESS DENIED';
-    document.getElementById('passphraseInput').value = '';
-    setTimeout(() => { errEl.textContent = ''; }, 2000);
-  }
-}
-
-async function trySetPassphrase() {
-  const pass    = document.getElementById('passphraseSetInput').value;
-  const confirm = document.getElementById('passphraseConfirmInput').value;
-  const errEl   = document.getElementById('lockError');
-  if (!pass)           { errEl.textContent = '// PASSPHRASE REQUIRED'; return; }
-  if (pass.length < 4) { errEl.textContent = '// MIN 4 CHARACTERS';    return; }
-  if (pass !== confirm) { errEl.textContent = '// PASSPHRASES DO NOT MATCH'; return; }
-  await JARVISPHINE.setPassphrase(pass);
-  document.getElementById('lockScreen').classList.add('hidden');
-  startApp();
-}
-
-// Lock icon in header
-function lockSystem() {
-  if (!confirm('Lock JARVISPHINE?')) return;
-  document.getElementById('lockScreen').classList.remove('hidden');
-  document.getElementById('passphraseInput').value = '';
-  // Show enter mode
-  document.getElementById('lockEnterMode').style.display = 'flex';
-  document.getElementById('lockSetMode').style.display   = 'none';
-  setTimeout(() => document.getElementById('passphraseInput').focus(), 100);
-}
+let chatHistory   = [];
+let memory        = {};
+let settings      = {};
+let saveStates    = [];
+let isTyping      = false;
+let isRecording   = false;
+let recognition   = null;
+let neuralLinkActive   = false;
+let syncTimeout        = null;
+let checkinsSentToday  = {};
 
 // ── Boot Sequence ─────────────────────────────────────
 function runBoot(callback) {
@@ -90,19 +21,17 @@ function runBoot(callback) {
   const fill   = document.getElementById('bootProgressFill');
   const text   = document.getElementById('bootText');
 
-  canvas.width  = boot.offsetWidth || 480;
+  canvas.width  = boot.offsetWidth  || 480;
   canvas.height = boot.offsetHeight || 800;
 
-  // Matrix rain setup
-  const cols = Math.floor(canvas.width / 14);
+  const cols  = Math.floor(canvas.width / 14);
   const drops = Array(cols).fill(1);
-  const chars = 'JARVISPHINE01アカサタナハマヤラワ'.split('');
+  const chars = 'JARVISPHINE01アカサタナハマヤ'.split('');
 
-  let matrixFrame = 0;
   const drawMatrix = () => {
     ctx.fillStyle = 'rgba(0,0,0,0.05)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#ff1a2e';
+    ctx.fillStyle = '#00d4ff';
     ctx.font = '13px monospace';
     drops.forEach((y, i) => {
       const ch = chars[Math.floor(Math.random() * chars.length)];
@@ -114,13 +43,12 @@ function runBoot(callback) {
 
   const matrixInterval = setInterval(drawMatrix, 40);
 
-  // Boot lines sequence
   const lines = [
-    'JARVISPHINE v5.0 BOOT SEQUENCE...',
-    'LOADING STARK TERMINAL UI...',
+    'JARVISPHINE v6.0 BOOT SEQUENCE...',
+    'CHARCOAL TERMINAL LOADING...',
     'NEURAL LINK CALIBRATING...',
     'SUPABASE SYNC ONLINE...',
-    'THREAT ANALYSIS ENGINE READY...',
+    'MOMENTUM ENGINE READY...',
     'PERSONALITY CORE LOADED...',
     'ALL SYSTEMS NOMINAL.'
   ];
@@ -134,31 +62,26 @@ function runBoot(callback) {
     }
   }, 280);
 
-  // Show HUD after 500ms of matrix rain
   setTimeout(() => { hud.classList.add('visible'); }, 500);
-
-  // Complete boot
   setTimeout(() => {
     clearInterval(matrixInterval);
     clearInterval(lineInterval);
     fill.style.width = '100%';
-    setTimeout(() => {
-      boot.classList.add('hidden');
-      if (callback) callback();
-    }, 400);
+    setTimeout(() => { boot.classList.add('hidden'); if (callback) callback(); }, 400);
   }, 2200);
 }
 
 // ── App Start ─────────────────────────────────────────
 async function startApp() {
   runBoot(async () => {
-    // Try to load from Supabase first
+    // Check server health
+    checkServerStatus();
+
     setSyncStatus('syncing');
     const remote = await JARVISPHINE.loadFromSupabase();
 
     if (remote.memory) {
-      memory = remote.memory;
-      // Day rollover check
+      memory = JARVISPHINE.migrateMemory(remote.memory);
       const today = new Date().toDateString();
       if (memory.lastDate !== today) {
         if (memory.lastDate && memory.today) {
@@ -166,7 +89,7 @@ async function startApp() {
           memory.history.unshift({ date: memory.lastDate, ...memory.today });
           if (memory.history.length > 90) memory.history.pop();
         }
-        memory.today = { drinks: null, sport: null, mood: null, water: null, journal: '', wake: null, outdoor: null };
+        memory.today   = JARVISPHINE.defaultToday();
         memory.lastDate = today;
       }
       JARVISPHINE.saveMemory(memory);
@@ -196,7 +119,6 @@ async function startApp() {
 
     setSyncStatus('synced');
 
-    // Load checkins sent today
     const todayKey = new Date().toDateString();
     const storedCheckins = JSON.parse(localStorage.getItem('jarvisphine_checkins_sent') || '{}');
     checkinsSentToday = storedCheckins[todayKey] || {};
@@ -211,20 +133,40 @@ async function startApp() {
     applyPersonalityMode(settings.personality || 'sharp');
     updateModeBadge(settings.personality || 'sharp');
 
-    if (!settings.apiKey && !settings.deepseekKey) {
-      showScreen('settings');
-      showToast('SYSTEM: API KEY REQUIRED');
-    } else if (chatHistory.length === 0) {
-      setTimeout(() => sendJarvisphineMessage("hey — I'm Jarvisphine. your real companion, not a bot. how's today looking?"), 2200);
+    if (chatHistory.length === 0) {
+      setTimeout(() => sendJarvisphineMessage(
+        "hey — I'm Jarvisphine. your real companion, not a bot. how's today looking? log your morning and tell me the plan."
+      ), 2200);
     } else {
       renderChat();
     }
   });
 }
 
+// ── Server Status ─────────────────────────────────────
+async function checkServerStatus() {
+  const dot  = document.getElementById('serverDot');
+  const text = document.getElementById('serverStatusText');
+  const prov = document.getElementById('providerStatus');
+  try {
+    const r = await fetch('/api/health');
+    if (!r.ok) throw new Error('offline');
+    const d = await r.json();
+    if (dot)  { dot.className  = 'server-dot online'; }
+    if (text) { text.textContent = 'Backend server online ✓'; text.style.color = 'var(--green)'; }
+    if (prov) { prov.textContent = `// AI: ${d.provider?.toUpperCase() || 'UNKNOWN'}`; }
+  } catch {
+    if (dot)  { dot.className  = 'server-dot offline'; }
+    if (text) { text.textContent = 'Backend offline — AI unavailable'; text.style.color = 'var(--red)'; }
+    if (prov) { prov.textContent = '// RUN: node server.js'; }
+  }
+}
+
 // ── Event Listeners ───────────────────────────────────
 function initEventListeners() {
-  document.querySelectorAll('.nav-btn').forEach(b => b.addEventListener('click', () => showScreen(b.dataset.screen)));
+  document.querySelectorAll('.nav-btn').forEach(b =>
+    b.addEventListener('click', () => showScreen(b.dataset.screen))
+  );
 
   document.getElementById('chatInput').addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
@@ -232,14 +174,32 @@ function initEventListeners() {
   document.getElementById('sendBtn').addEventListener('click', sendMessage);
   document.getElementById('saveSettings').addEventListener('click', saveSettingsFn);
   document.getElementById('generateBriefing').addEventListener('click', generateMissionBriefing);
+
+  // Quick log
   document.querySelectorAll('.quick-log').forEach(b => b.addEventListener('click', () => {
-    if (b.dataset.type === 'wake' && b.dataset.value === 'prompt') { promptWakeTime(); }
-    else quickLog(b.dataset.type, b.dataset.value, b);
+    const type = b.dataset.type, val = b.dataset.value;
+    if (val === 'prompt') {
+      if (type === 'wake')   promptWakeTime();
+      if (type === 'sleep')  promptSleepHours();
+      if (type === 'energy') promptEnergyScore();
+    } else {
+      quickLog(type, val, b);
+    }
   }));
+
+  // Morning ritual buttons
+  document.querySelectorAll('.ritual-btn').forEach(b => b.addEventListener('click', () => {
+    logRitual(b.dataset.ritual, b.dataset.value, b);
+  }));
+
+  // Daily plan
+  document.getElementById('savePlanBtn').addEventListener('click', saveDailyPlan);
 
   // Export / Import
   document.getElementById('exportDataBtn').addEventListener('click', exportData);
-  document.getElementById('importDataBtn').addEventListener('click', () => document.getElementById('importFileInput').click());
+  document.getElementById('importDataBtn').addEventListener('click', () =>
+    document.getElementById('importFileInput').click()
+  );
   document.getElementById('importFileInput').addEventListener('change', importData);
 
   // Save states
@@ -289,7 +249,6 @@ function initEventListeners() {
       b.classList.add('active');
       settings.provider = b.dataset.provider;
       JARVISPHINE.saveSettings(settings);
-      updateProviderStatus();
     });
   });
 
@@ -306,10 +265,10 @@ function initEventListeners() {
     });
   });
 
-  // Mode badge in header (cycle through modes)
+  // Mode badge cycles
   document.getElementById('modeBadge').addEventListener('click', () => {
     const modes = ['soft', 'sharp', 'noexcuses'];
-    const cur = modes.indexOf(settings.personality || 'sharp');
+    const cur  = modes.indexOf(settings.personality || 'sharp');
     const next = modes[(cur + 1) % modes.length];
     settings.personality = next;
     JARVISPHINE.saveSettings(settings);
@@ -319,33 +278,25 @@ function initEventListeners() {
     showToast(`// MODE: ${next.toUpperCase()}`, 'gold');
   });
 
-  // Lock icon
-  document.getElementById('lockIconBtn').addEventListener('click', lockSystem);
-
-  // Change passphrase
-  document.getElementById('changePassBtn').addEventListener('click', async () => {
-    const val = document.getElementById('newPassInput').value;
-    if (!val || val.length < 4) { showToast('// MIN 4 CHARACTERS'); return; }
-    await JARVISPHINE.setPassphrase(val);
-    document.getElementById('newPassInput').value = '';
-    showToast('// PASSPHRASE UPDATED', 'green');
-  });
+  // Intel tab buttons
+  document.getElementById('generateBriefBtn').addEventListener('click', generateIntelBrief);
+  document.getElementById('generateInsightsBtn').addEventListener('click', generatePatternInsights);
 
   window.speechSynthesis?.addEventListener('voiceschanged', () => {});
 }
 
 // ── Personality Mode ──────────────────────────────────
 function applyPersonalityMode(mode) {
-  document.querySelectorAll('.mode-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.mode === mode);
-  });
+  document.querySelectorAll('.mode-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.mode === mode)
+  );
 }
 
 function updateModeBadge(mode) {
-  const badge = document.getElementById('modeBadge');
+  const badge  = document.getElementById('modeBadge');
   const labels = { soft: 'SOFT', sharp: 'SHARP', noexcuses: 'NO XCSS' };
   badge.textContent = labels[mode] || 'SHARP';
-  badge.className = `mode-badge ${mode}`;
+  badge.className   = `mode-badge ${mode}`;
 }
 
 // ── Sync Status ───────────────────────────────────────
@@ -391,8 +342,8 @@ function renderChat() {
 }
 
 function appendMsg(role, content, isCheckin = false) {
-  const c = document.getElementById('chatMessages');
-  const d = document.createElement('div');
+  const c   = document.getElementById('chatMessages');
+  const d   = document.createElement('div');
   const cls = role === 'user' ? 'message-user' : isCheckin ? 'message-checkin' : 'message-jarvis';
   d.className = `message ${cls}`;
   d.innerHTML = role === 'assistant'
@@ -422,17 +373,17 @@ async function sendMessage(override) {
   const inp  = document.getElementById('chatInput');
   const text = override || inp.value.trim();
   if (!text) return;
-  if (!settings.apiKey && !settings.deepseekKey) { showToast('NO API KEY — CHECK CONFIG'); showScreen('settings'); return; }
   inp.value = '';
   inp.style.height = '';
   appendMsg('user', text);
   chatHistory.push({ role: 'user', content: text });
 
-  // Extract log data
+  // Extract log data from natural language
   const logData = JARVISPHINE.extractLogData(text);
   if (Object.keys(logData).length) {
     Object.assign(memory.today, logData);
-    if (typeof logData.drinks === 'number') JARVISPHINE.updateStreak(memory, 'sober_days', logData.drinks === 0);
+    if (typeof logData.drinks === 'number')
+      JARVISPHINE.updateStreak(memory, 'sober_days', logData.drinks === 0);
     if (logData.sport === 'yes') JARVISPHINE.updateStreak(memory, 'sport_days', true);
     if (logData.sport === 'no')  JARVISPHINE.updateStreak(memory, 'sport_days', false);
     JARVISPHINE.saveMemory(memory);
@@ -441,8 +392,8 @@ async function sendMessage(override) {
 
   isTyping = true; showTyping();
   try {
-    const sys  = JARVISPHINE.getSystemPrompt(settings.userName || 'Friend', memory, settings.personality || 'sharp');
-    const msgs = chatHistory.slice(-12).map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content }));
+    const sys      = JARVISPHINE.getSystemPrompt(settings.userName || 'Friend', memory, settings.personality || 'sharp');
+    const msgs     = chatHistory.slice(-12).map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content }));
     const response = await JARVISPHINE.callAPI(msgs, sys, settings);
     removeTyping();
     sendJarvisphineMessage(response);
@@ -462,38 +413,155 @@ function sendJarvisphineMessage(content, isCheckin = false) {
   debouncedSync();
 }
 
-// ── Wake Time Prompt ──────────────────────────────────
+// ── Wake / Sleep / Energy prompts ─────────────────────
 function promptWakeTime() {
   const t = prompt('What time did you wake up? (e.g., 7:30 or 9)');
   if (!t) return;
   const match = t.match(/(\d{1,2})(?::(\d{2}))?/);
   if (!match) { showToast('// INVALID TIME FORMAT'); return; }
-  const h = parseInt(match[1]);
-  const m = match[2] ? parseInt(match[2]) : 0;
+  const h    = parseInt(match[1]);
+  const m    = match[2] ? parseInt(match[2]) : 0;
   const wake = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
   memory.today.wake = wake;
   JARVISPHINE.saveMemory(memory);
   renderHome();
   showToast(`// WAKE: ${wake}`, 'green');
   showScreen('chat');
-  sendMessage(`woke up at ${wake}`);
+  // Morning plan prompt after wake time logged
+  if (!memory.today.plan) {
+    setTimeout(() => triggerMorningPlanPrompt(), 500);
+  } else {
+    sendMessage(`woke up at ${wake}`);
+  }
+}
+
+function promptSleepHours() {
+  const t = prompt('How many hours did you sleep? (e.g., 7.5)');
+  if (!t) return;
+  const h = parseFloat(t);
+  if (isNaN(h) || h < 0 || h > 24) { showToast('// INVALID VALUE'); return; }
+  memory.today.sleep_hours = h;
+  JARVISPHINE.saveMemory(memory);
+  renderHome();
+  showToast(`// SLEEP: ${h}h`, 'green');
+  showScreen('chat');
+  sendMessage(`slept ${h} hours last night`);
+}
+
+function promptEnergyScore() {
+  const t = prompt('Energy level right now? (1-10)');
+  if (!t) return;
+  const e = parseInt(t);
+  if (isNaN(e) || e < 1 || e > 10) { showToast('// ENTER 1-10'); return; }
+  memory.today.energy = e;
+  JARVISPHINE.saveMemory(memory);
+  renderHome();
+  showToast(`// ENERGY: ${e}/10`, 'green');
+  showScreen('chat');
+  sendMessage(`energy level is ${e}/10 today`);
+}
+
+// ── Morning Plan ──────────────────────────────────────
+async function triggerMorningPlanPrompt() {
+  if (!chatHistory.length) return;
+  try {
+    const prompt = JARVISPHINE.getMorningPlanPrompt(settings.userName || 'Friend', memory);
+    const resp   = await JARVISPHINE.callAPI([{ role: 'user', content: prompt }], '', settings);
+    sendJarvisphineMessage(resp, true);
+  } catch { /* silent */ }
+}
+
+function saveDailyPlan() {
+  const text = document.getElementById('dailyPlanInput').value.trim();
+  if (!text) { showToast('// TYPE YOUR PLAN FIRST'); return; }
+  memory.today.plan = text;
+  JARVISPHINE.saveMemory(memory);
+  debouncedSync();
+  renderDailyPlan();
+  document.getElementById('dailyPlanInput').value = '';
+  showToast('// PLAN LOCKED IN', 'green');
+  showScreen('chat');
+  sendMessage(`Today's plan: ${text}`);
+}
+
+function renderDailyPlan() {
+  const display = document.getElementById('dailyPlanDisplay');
+  const input   = document.getElementById('dailyPlanInput');
+  if (!display) return;
+  const plan = memory.today?.plan || '';
+  if (plan) {
+    display.textContent = plan;
+    display.classList.add('has-plan');
+    if (input) input.placeholder = 'Update today\'s plan...';
+  } else {
+    display.classList.remove('has-plan');
+  }
+}
+
+// ── Morning Ritual ────────────────────────────────────
+function logRitual(ritualKey, value, btn) {
+  if (!memory.today.morning_ritual) {
+    memory.today.morning_ritual = { stretch: null, shower: null, breakfast: null, meditate: null };
+  }
+  memory.today.morning_ritual[ritualKey] = value;
+  JARVISPHINE.saveMemory(memory);
+  renderMorningRitual();
+  renderMomentumScore();
+  debouncedSync();
+
+  // Visual feedback on button
+  const siblings = document.querySelectorAll(`.ritual-btn[data-ritual="${ritualKey}"]`);
+  siblings.forEach(s => { s.classList.remove('done', 'skipped'); });
+  if (btn) {
+    btn.classList.add(value === 'yes' ? 'done' : 'skipped');
+    setTimeout(() => btn.classList.remove('done', 'skipped'), 2000);
+  }
+
+  const labels = {
+    'stretch:yes': 'stretched this morning', 'stretch:no': 'skipped stretching',
+    'shower:yes':  'took a cold shower',    'shower:no':  'skipped the cold shower',
+    'breakfast:yes': 'had a good breakfast','breakfast:no': 'skipped breakfast',
+    'meditate:yes': 'meditated this morning','meditate:no': 'skipped meditation'
+  };
+  const key = `${ritualKey}:${value}`;
+  if (labels[key]) { showScreen('chat'); sendMessage(labels[key]); }
+}
+
+function renderMorningRitual() {
+  const ritual = memory.today?.morning_ritual || {};
+  document.querySelectorAll('.ritual-btn').forEach(btn => {
+    const r = btn.dataset.ritual;
+    const v = btn.dataset.value;
+    btn.classList.remove('done', 'skipped');
+    if (ritual[r] === v) {
+      btn.classList.add(v === 'yes' ? 'done' : 'skipped');
+    }
+  });
+  // Update morning score bar
+  const score = JARVISPHINE.calcMorningRitualScore(ritual);
+  const fill  = document.getElementById('morningScoreFill');
+  const label = document.getElementById('morningScoreLabel');
+  if (fill)  fill.style.width = score + '%';
+  if (label) {
+    label.textContent = score + '%';
+    label.style.color = score >= 75 ? 'var(--green)' : score >= 50 ? 'var(--gold)' : 'var(--text2)';
+  }
 }
 
 // ── Quick Log ─────────────────────────────────────────
 function quickLog(type, value, btn) {
   if (type === 'drinks')  memory.today.drinks  = parseInt(value);
   if (type === 'sport')   memory.today.sport   = value;
-  if (type === 'mood')    memory.today.mood     = value;
-  if (type === 'water')   memory.today.water    = parseInt(value);
-  if (type === 'outdoor') memory.today.outdoor  = value;
+  if (type === 'mood')    memory.today.mood    = value;
+  if (type === 'water')   memory.today.water   = parseInt(value);
+  if (type === 'outdoor') memory.today.outdoor = value;
 
-  if (type === 'sport') JARVISPHINE.updateStreak(memory, 'sport_days', value === 'yes');
+  if (type === 'sport')  JARVISPHINE.updateStreak(memory, 'sport_days', value === 'yes');
   if (type === 'drinks') JARVISPHINE.updateStreak(memory, 'sober_days', parseInt(value) === 0);
 
   JARVISPHINE.saveMemory(memory);
   renderHome();
 
-  // Visual feedback
   if (btn) {
     btn.classList.add('selected');
     setTimeout(() => btn.classList.remove('selected'), 1200);
@@ -504,7 +572,7 @@ function quickLog(type, value, btn) {
     'drinks-3': 'had 3+ drinks',         'sport-yes': 'did sport today',
     'sport-no': 'skipped sport today',   'mood-good': 'mood is good today',
     'mood-low': 'feeling low today',     'water-6': 'drank 6 glasses of water',
-    'water-8': 'drank 8 glasses of water','outdoor-yes': 'went outside today',
+    'water-8': 'drank 8 glasses of water', 'outdoor-yes': 'went outside today',
     'outdoor-no': 'stayed inside today'
   };
   const key = `${type}-${value}`;
@@ -514,11 +582,11 @@ function quickLog(type, value, btn) {
 // ── Voice / Neural Link ───────────────────────────────
 function initVoice() {
   if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) return;
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const SR    = window.SpeechRecognition || window.webkitSpeechRecognition;
   recognition = new SR();
-  recognition.continuous = false;
+  recognition.continuous     = false;
   recognition.interimResults = true;
-  recognition.lang = 'en-US';
+  recognition.lang           = 'en-US';
   recognition.onresult = e => {
     const t = Array.from(e.results).map(r => r[0].transcript).join('');
     if (neuralLinkActive) document.getElementById('nlTranscript').textContent = t;
@@ -567,7 +635,7 @@ function stopVoiceCapture() {
 function sendNeuralLinkMessage(text) {
   if (!text.trim()) return;
   document.getElementById('nlTranscript').textContent = '';
-  document.getElementById('nlResponse').textContent = '// PROCESSING...';
+  document.getElementById('nlResponse').textContent  = '// PROCESSING...';
   sendMessage(text.trim());
   const checkReply = setInterval(() => {
     const last = chatHistory[chatHistory.length - 1];
@@ -584,30 +652,27 @@ function stopVoice() { if (recognition) try { recognition.stop(); } catch(e) {} 
 
 // ── Scheduled Check-ins ───────────────────────────────
 const CHECK_IN_SLOTS = [
-  { key: 'morning',      h: 11, m: 30, name: 'morning' },
-  { key: 'afternoon',    h: 14, m:  0, name: 'afternoon' },
-  { key: 'lateafternoon',h: 17, m:  0, name: 'lateafternoon' },
-  { key: 'evening',      h: 20, m:  0, name: 'evening' },
-  { key: 'debrief',      h: 23, m:  0, name: 'debrief' }
+  { key: 'morning',       h: 11, m: 30, name: 'morning'       },
+  { key: 'afternoon',     h: 14, m:  0, name: 'afternoon'     },
+  { key: 'lateafternoon', h: 17, m:  0, name: 'lateafternoon' },
+  { key: 'evening',       h: 20, m:  0, name: 'evening'       },
+  { key: 'debrief',       h: 23, m:  0, name: 'debrief'       }
 ];
 
 function startScheduler() {
-  setInterval(checkScheduledEvents, 30000); // check every 30s
+  setInterval(checkScheduledEvents, 30000);
 }
 
 function checkScheduledEvents() {
-  const now    = new Date();
+  const now      = new Date();
   const todayStr = now.toDateString();
 
-  // Reset sent checkins on new day
   const stored = JSON.parse(localStorage.getItem('jarvisphine_checkins_sent') || '{}');
   if (!stored[todayStr]) {
     checkinsSentToday = {};
-    const clean = { [todayStr]: {} };
-    localStorage.setItem('jarvisphine_checkins_sent', JSON.stringify(clean));
+    localStorage.setItem('jarvisphine_checkins_sent', JSON.stringify({ [todayStr]: {} }));
   }
 
-  // Check each slot (±1 minute window)
   CHECK_IN_SLOTS.forEach(slot => {
     if (checkinsSentToday[slot.key]) return;
     const slotTime = slot.h * 60 + slot.m;
@@ -622,7 +687,6 @@ function checkScheduledEvents() {
     }
   });
 
-  // Auto-debrief at 23:00
   if (now.getHours() === 23 && now.getMinutes() === 0 && !checkinsSentToday['auto_debrief']) {
     checkinsSentToday['auto_debrief'] = true;
     triggerManualDebrief();
@@ -630,22 +694,20 @@ function checkScheduledEvents() {
 }
 
 async function triggerCheckIn(slotName) {
-  if (!settings.apiKey && !settings.deepseekKey) return;
-  const prompt = JARVISPHINE.getCheckInPrompt(settings.userName || 'Friend', memory, slotName);
   try {
-    const resp = await JARVISPHINE.callAPI([{ role: 'user', content: prompt }], '', settings);
+    const prompt = JARVISPHINE.getCheckInPrompt(settings.userName || 'Friend', memory, slotName);
+    const resp   = await JARVISPHINE.callAPI([{ role: 'user', content: prompt }], '', settings);
     showScreen('chat');
     sendJarvisphineMessage(resp, true);
     showToast('// CHECK-IN FROM JARVISPHINE', 'gold');
     if ('Notification' in window && Notification.permission === 'granted') {
       new Notification('Jarvisphine', { body: resp.slice(0, 80) });
     }
-  } catch(e) { /* silent fail */ }
+  } catch { /* silent */ }
 }
 
 // ── Mission Briefing ──────────────────────────────────
 function generateMissionBriefing() {
-  if (!settings.apiKey && !settings.deepseekKey) { showToast('NO API KEY — CHECK CONFIG'); return; }
   const btn = document.getElementById('generateBriefing');
   btn.disabled = true; btn.textContent = '⚡ GENERATING...';
   const prompt = JARVISPHINE.getMissionBriefing(settings.userName || 'Friend', memory);
@@ -661,7 +723,6 @@ function generateMissionBriefing() {
 }
 
 function triggerManualDebrief() {
-  if (!settings.apiKey && !settings.deepseekKey) { showToast('NO API KEY — CHECK CONFIG'); return; }
   const prompt = JARVISPHINE.getDailyDebrief(settings.userName || 'Friend', memory);
   JARVISPHINE.callAPI([{ role: 'user', content: prompt }], '', settings)
     .then(resp => {
@@ -675,6 +736,50 @@ function triggerManualDebrief() {
       showToast('// DEBRIEF GENERATED', 'green');
     })
     .catch(err => showToast(`ERROR: ${err.message}`));
+}
+
+// ── Intel Brief (Daily Learning) ──────────────────────
+async function generateIntelBrief() {
+  const btn = document.getElementById('generateBriefBtn');
+  const el  = document.getElementById('intelBriefText');
+  btn.disabled = true; btn.textContent = '🧠 LOADING...';
+  const topics = (settings.topics || 'science, psychology, history, philosophy').split(',').map(t => t.trim()).filter(Boolean);
+  const prompt = JARVISPHINE.getDailyIntelBrief(topics);
+  try {
+    const resp = await JARVISPHINE.callAPI([{ role: 'user', content: prompt }], '', settings);
+    // Parse topic tag
+    const topicMatch = resp.match(/^\[([^\]]+)\]/);
+    if (topicMatch) {
+      const topic   = topicMatch[1];
+      const content = resp.replace(/^\[([^\]]+)\]\n?/, '');
+      el.innerHTML = `<span class="intel-topic">[${topic}]</span>${content}`;
+    } else {
+      el.textContent = resp;
+    }
+    showToast('// INTEL BRIEF READY', 'green');
+  } catch (err) {
+    el.textContent = `Error: ${err.message}`;
+    showToast(`ERROR: ${err.message}`);
+  }
+  btn.disabled = false; btn.textContent = '🧠 GET BRIEF';
+}
+
+// ── Pattern Insights ──────────────────────────────────
+async function generatePatternInsights() {
+  const btn = document.getElementById('generateInsightsBtn');
+  const el  = document.getElementById('patternInsightsText');
+  btn.disabled = true; btn.textContent = '🔍 ANALYZING...';
+  const history = memory.history || [];
+  const prompt  = JARVISPHINE.getPatternInsightsPrompt(settings.userName || 'Friend', history);
+  try {
+    const resp = await JARVISPHINE.callAPI([{ role: 'user', content: prompt }], '', settings);
+    el.innerHTML = resp.replace(/\n/g, '<br>');
+    showToast('// PATTERNS ANALYZED', 'green');
+  } catch (err) {
+    el.textContent = `Error: ${err.message}`;
+    showToast(`ERROR: ${err.message}`);
+  }
+  btn.disabled = false; btn.textContent = '🔍 ANALYZE PATTERNS';
 }
 
 // ── Export / Import ───────────────────────────────────
@@ -692,10 +797,10 @@ function importData(e) {
     const result = JARVISPHINE.importDataFromJSON(ev.target.result);
     if (!result.success) { showToast(`IMPORT ERROR: ${result.error}`); return; }
     const { data } = result;
-    memory = data.memory;
-    settings = { ...settings, ...data.settings };
+    memory     = data.memory;
+    settings   = { ...settings, ...data.settings };
     chatHistory = data.chatHistory || [];
-    saveStates = data.saveStates || [];
+    saveStates  = data.saveStates  || [];
     JARVISPHINE.saveMemory(memory);
     JARVISPHINE.saveSettings(settings);
     JARVISPHINE.saveHistory(chatHistory);
@@ -717,15 +822,12 @@ function openSaveModal() {
   document.getElementById('saveStateName').value = '';
 }
 
-function closeSaveModal() {
-  document.getElementById('saveModal').classList.remove('active');
-}
+function closeSaveModal() { document.getElementById('saveModal').classList.remove('active'); }
 
 function renderSaveStates() {
   const list = document.getElementById('saveStatesList');
   if (!saveStates.length) {
-    list.innerHTML = '<p class="empty-state">// NO SAVES YET</p>';
-    return;
+    list.innerHTML = '<p class="empty-state">// NO SAVES YET</p>'; return;
   }
   list.innerHTML = saveStates.map((s, i) => `
     <div class="save-state-item">
@@ -744,12 +846,7 @@ function renderSaveStates() {
 function createSaveState() {
   const name = document.getElementById('saveStateName').value.trim();
   if (!name) { showToast('// NAME REQUIRED'); return; }
-  const save = {
-    name,
-    date: new Date().toISOString(),
-    snapshot: JSON.parse(JSON.stringify(memory)),
-    chatSnapshot: chatHistory.slice(-20)
-  };
+  const save = { name, date: new Date().toISOString(), snapshot: JSON.parse(JSON.stringify(memory)), chatSnapshot: chatHistory.slice(-20) };
   saveStates.unshift(save);
   if (saveStates.length > 10) saveStates.pop();
   JARVISPHINE.saveSaveStates(saveStates);
@@ -761,7 +858,7 @@ function createSaveState() {
 
 function loadSaveState(idx) {
   if (!confirm(`Load save: "${saveStates[idx].name}"? Current data will be replaced.`)) return;
-  memory = JSON.parse(JSON.stringify(saveStates[idx].snapshot));
+  memory      = JSON.parse(JSON.stringify(saveStates[idx].snapshot));
   chatHistory = saveStates[idx].chatSnapshot || [];
   JARVISPHINE.saveMemory(memory);
   JARVISPHINE.saveHistory(chatHistory);
@@ -779,14 +876,8 @@ function deleteSaveState(idx) {
 }
 
 // ── Goals ─────────────────────────────────────────────
-function openGoalModal() {
-  document.getElementById('goalModal').classList.add('active');
-  document.getElementById('goalText').value = '';
-}
-
-function closeGoalModal() {
-  document.getElementById('goalModal').classList.remove('active');
-}
+function openGoalModal()  { document.getElementById('goalModal').classList.add('active'); document.getElementById('goalText').value = ''; }
+function closeGoalModal() { document.getElementById('goalModal').classList.remove('active'); }
 
 function saveGoal() {
   const text   = document.getElementById('goalText').value.trim();
@@ -798,7 +889,7 @@ function saveGoal() {
   debouncedSync();
   closeGoalModal();
   renderGoals();
-  showToast(`// GOAL ADDED`, 'green');
+  showToast('// GOAL ADDED', 'green');
 }
 
 function deleteGoal(period, idx) {
@@ -810,7 +901,7 @@ function deleteGoal(period, idx) {
 }
 
 function renderGoals() {
-  const goals = memory.goals || { weekly: [], monthly: [], quarterly: [] };
+  const goals     = memory.goals || { weekly: [], monthly: [], quarterly: [] };
   const container = document.getElementById('goalsList');
   if (!container) return;
   let html = '';
@@ -848,74 +939,83 @@ function saveJournal() {
 
 // ── Home ──────────────────────────────────────────────
 function renderHome() {
-  const today   = memory.today || {};
+  const today   = memory.today   || {};
   const streaks = memory.streaks || {};
+
   animateStat('stat-drinks',  today.drinks  != null ? today.drinks : '—');
   animateStat('stat-sport',   today.sport   ?? '—');
   animateStat('stat-mood',    today.mood    ?? '—');
   animateStat('stat-water',   today.water   != null ? today.water + 'gl' : '—');
   animateStat('stat-wake',    today.wake    ?? '—');
+  animateStat('stat-sleep',   today.sleep_hours != null ? today.sleep_hours + 'h' : '—');
+  animateStat('stat-energy',  today.energy  != null ? today.energy + '/10' : '—');
   animateStat('stat-outdoor', today.outdoor ?? '—');
-  animateStat('streak-sober', streaks.sober_days ?? 0);
-  animateStat('streak-sport', streaks.sport_days ?? 0);
+  animateStat('streak-sober', streaks.sober_days  ?? 0);
+  animateStat('streak-sport', streaks.sport_days  ?? 0);
+  animateStat('streak-ritual', streaks.ritual_days ?? 0);
 
   // Color coding
   const dEl = document.getElementById('stat-drinks');
   if (dEl && today.drinks != null) {
-    dEl.className = `stat-value ${today.drinks === 0 ? 'green' : today.drinks <= 2 ? '' : 'red'}`;
+    dEl.className = `stat-value ${today.drinks === 0 ? 'green' : today.drinks <= 2 ? 'gold' : 'red'}`;
   }
   const sEl = document.getElementById('stat-sport');
   if (sEl) sEl.className = `stat-value ${today.sport === 'yes' ? 'green' : today.sport === 'no' ? 'red' : ''}`;
   const oEl = document.getElementById('stat-outdoor');
   if (oEl) oEl.className = `stat-value ${today.outdoor === 'yes' ? 'green' : today.outdoor === 'no' ? 'red' : ''}`;
+  const eEl = document.getElementById('stat-energy');
+  if (eEl && today.energy != null) {
+    eEl.className = `stat-value ${today.energy >= 7 ? 'green' : today.energy >= 4 ? 'gold' : 'red'}`;
+  }
 
-  renderThreatLevel();
+  renderMorningRitual();
+  renderDailyPlan();
+  renderMomentumScore();
 }
 
 function animateStat(id, val) {
   const el = document.getElementById(id);
   if (!el) return;
-  const current = el.textContent;
-  if (current === String(val)) return;
+  if (el.textContent === String(val)) return;
   el.classList.add('updating');
   setTimeout(() => { el.textContent = val; el.classList.remove('updating'); }, 130);
 }
 
-function renderThreatLevel() {
-  const threat = JARVISPHINE.calculateThreatLevel(memory);
-  const arc    = document.getElementById('threatArc');
-  const label  = document.getElementById('threatLabel');
-  const pct    = document.getElementById('threatPct');
-  const desc   = document.getElementById('threatDesc');
-  const dot    = document.getElementById('threatIndicator');
+function renderMomentumScore() {
+  const momentum = JARVISPHINE.calculateMomentum(memory);
+  const arc      = document.getElementById('threatArc');
+  const label    = document.getElementById('threatLabel');
+  const pct      = document.getElementById('threatPct');
+  const desc     = document.getElementById('threatDesc');
+  const dot      = document.getElementById('threatIndicator');
   if (!arc) return;
 
-  // Circumference for r=35: 2π×35 ≈ 220
   const circumference = 220;
-  const offset = circumference - (circumference * threat.score / 100);
+  const offset = circumference - (circumference * momentum.score / 100);
   arc.style.strokeDashoffset = offset;
-  arc.style.stroke = threat.color;
-  arc.style.filter = `drop-shadow(0 0 6px ${threat.color})`;
+  arc.style.stroke = momentum.color;
+  arc.style.filter = `drop-shadow(0 0 6px ${momentum.color})`;
 
-  label.textContent = threat.level;
-  label.style.color = threat.color;
-  label.style.textShadow = `0 0 8px ${threat.color}`;
-  pct.textContent   = threat.score + '%';
-  pct.style.color   = threat.color;
-  if (desc) { desc.textContent = threat.desc; }
-  if (dot)  { dot.style.background = threat.color; dot.style.boxShadow = `0 0 8px ${threat.color}`; }
+  label.textContent  = momentum.level;
+  label.style.color  = momentum.color;
+  label.style.textShadow = `0 0 8px ${momentum.color}`;
+  pct.textContent    = momentum.score + '%';
+  pct.style.color    = momentum.color;
+  if (desc) desc.textContent = momentum.desc;
+  if (dot)  { dot.style.background = momentum.color; dot.style.boxShadow = `0 0 8px ${momentum.color}`; }
 }
 
 // ── Intel ─────────────────────────────────────────────
 function renderIntel() {
   const streaks = memory.streaks || {};
   const history = memory.history || [];
-  animateStat('s-sober-current', streaks.sober_days  ?? 0);
-  animateStat('s-sober-best',    streaks.sober_best   ?? 0);
-  animateStat('s-sport-current', streaks.sport_days  ?? 0);
-  animateStat('s-sport-best',    streaks.sport_best   ?? 0);
+  animateStat('s-sober-current', streaks.sober_days ?? 0);
+  animateStat('s-sober-best',    streaks.sober_best  ?? 0);
+  animateStat('s-sport-current', streaks.sport_days ?? 0);
+  animateStat('s-sport-best',    streaks.sport_best  ?? 0);
   drawDrinksChart(history);
   drawMoodChart(history);
+  drawEnergyChart(history);
   drawSportHeatmap(history);
   renderDebriefs();
 }
@@ -924,27 +1024,27 @@ function drawDrinksChart(history) {
   const canvas = document.getElementById('drinksChart');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
-  const w = canvas.width = canvas.offsetWidth;
-  const h = canvas.height = 80;
+  const w   = canvas.width = canvas.offsetWidth;
+  const h   = canvas.height = 80;
   ctx.clearRect(0, 0, w, h);
   const days = [...history].slice(0, 7).reverse();
   if (!days.length) {
-    ctx.fillStyle = '#3a1018'; ctx.font = '9px Orbitron, monospace';
-    ctx.fillText('// NO DATA', 10, 40); return;
+    ctx.fillStyle = '#1c2640'; ctx.font = '9px Orbitron, monospace';
+    ctx.fillText('// NO DATA YET', 10, 40); return;
   }
   const maxVal = Math.max(...days.map(d => d.drinks || 0), 1);
-  const barW = Math.floor((w - 20) / days.length) - 4;
+  const barW   = Math.floor((w - 20) / days.length) - 4;
   days.forEach((day, i) => {
     const val  = day.drinks || 0;
     const barH = Math.max(2, (val / maxVal) * (h - 20));
     const x    = 10 + i * ((w - 20) / days.length);
     const y    = h - barH - 10;
-    const color = val === 0 ? '#00ff41' : val <= 2 ? '#f5a623' : '#ff1a2e';
+    const color = val === 0 ? '#00ff88' : val <= 2 ? '#f5a623' : '#ff4466';
     ctx.fillStyle = color + '30'; ctx.fillRect(x, y, barW, barH);
     ctx.fillStyle = color;        ctx.fillRect(x, y, barW, 2);
     ctx.shadowColor = color; ctx.shadowBlur = 4;
     ctx.fillRect(x, y, barW, 2); ctx.shadowBlur = 0;
-    ctx.fillStyle = '#3a1018'; ctx.font = '7px Orbitron, monospace';
+    ctx.fillStyle = '#1c2640'; ctx.font = '7px Orbitron, monospace';
     ctx.fillText(val, x + barW/2 - 3, h - 2);
   });
 }
@@ -953,22 +1053,22 @@ function drawMoodChart(history) {
   const canvas = document.getElementById('moodChart');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
-  const w = canvas.width = canvas.offsetWidth;
-  const h = canvas.height = 50;
+  const w   = canvas.width = canvas.offsetWidth;
+  const h   = canvas.height = 50;
   ctx.clearRect(0, 0, w, h);
   const days = [...history].slice(0, 7).reverse();
   if (!days.length) return;
   const moodY     = { good: 10, neutral: 25, low: 40 };
-  const moodColor = { good: '#00ff41', neutral: '#f5a623', low: '#ff1a2e' };
+  const moodColor = { good: '#00ff88', neutral: '#f5a623', low: '#ff4466' };
   const pts = days.map((d, i) => ({
     x: 15 + i * ((w - 30) / Math.max(days.length - 1, 1)),
     y: moodY[d.mood] || 25,
-    color: moodColor[d.mood] || '#3a1018'
+    color: moodColor[d.mood] || '#1c2640'
   }));
   if (pts.length > 1) {
     ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
     pts.forEach(p => ctx.lineTo(p.x, p.y));
-    ctx.strokeStyle = '#f5a62330'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.strokeStyle = '#00d4ff30'; ctx.lineWidth = 1; ctx.stroke();
   }
   pts.forEach(p => {
     ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
@@ -977,23 +1077,71 @@ function drawMoodChart(history) {
   });
 }
 
+function drawEnergyChart(history) {
+  const canvas = document.getElementById('energyChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w   = canvas.width = canvas.offsetWidth;
+  const h   = canvas.height = 60;
+  ctx.clearRect(0, 0, w, h);
+  const days = [...history].slice(0, 7).reverse();
+  if (!days.length) {
+    ctx.fillStyle = '#1c2640'; ctx.font = '9px Orbitron, monospace';
+    ctx.fillText('// NO DATA YET', 10, 30); return;
+  }
+  const pts = days.map((d, i) => ({
+    x: 15 + i * ((w - 30) / Math.max(days.length - 1, 1)),
+    ey: d.energy != null ? h - 5 - ((d.energy / 10) * (h - 15)) : null,
+    sy: d.sleep_hours != null ? h - 5 - (Math.min(d.sleep_hours, 10) / 10 * (h - 15)) : null
+  }));
+  // Energy line (blue)
+  const ePoints = pts.filter(p => p.ey != null);
+  if (ePoints.length > 1) {
+    ctx.beginPath(); ctx.moveTo(ePoints[0].x, ePoints[0].ey);
+    ePoints.forEach(p => ctx.lineTo(p.x, p.ey));
+    ctx.strokeStyle = '#00d4ff80'; ctx.lineWidth = 1.5; ctx.stroke();
+  }
+  ePoints.forEach(p => {
+    ctx.beginPath(); ctx.arc(p.x, p.ey, 3, 0, Math.PI * 2);
+    ctx.fillStyle = '#00d4ff'; ctx.fill();
+    ctx.shadowColor = '#00d4ff'; ctx.shadowBlur = 5; ctx.fill(); ctx.shadowBlur = 0;
+  });
+  // Sleep line (gold)
+  const sPoints = pts.filter(p => p.sy != null);
+  if (sPoints.length > 1) {
+    ctx.beginPath(); ctx.moveTo(sPoints[0].x, sPoints[0].sy);
+    sPoints.forEach(p => ctx.lineTo(p.x, p.sy));
+    ctx.strokeStyle = '#f5a62360'; ctx.lineWidth = 1.5; ctx.stroke();
+  }
+  sPoints.forEach(p => {
+    ctx.beginPath(); ctx.arc(p.x, p.sy, 3, 0, Math.PI * 2);
+    ctx.fillStyle = '#f5a623'; ctx.fill();
+    ctx.shadowColor = '#f5a623'; ctx.shadowBlur = 5; ctx.fill(); ctx.shadowBlur = 0;
+  });
+  // Legend
+  ctx.fillStyle = '#00d4ff'; ctx.font = '7px Orbitron, monospace';
+  ctx.fillText('energy', 5, 10);
+  ctx.fillStyle = '#f5a623';
+  ctx.fillText('sleep', 50, 10);
+}
+
 function drawSportHeatmap(history) {
   const canvas = document.getElementById('sportHeatmap');
   if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  const w = canvas.width = canvas.offsetWidth;
-  const h = canvas.height = 30;
+  const ctx  = canvas.getContext('2d');
+  const w    = canvas.width = canvas.offsetWidth;
+  const h    = canvas.height = 30;
   ctx.clearRect(0, 0, w, h);
   const days  = [...history].slice(0, 28).reverse();
   const cellW = Math.floor((w - 10) / 28);
   days.forEach((day, i) => {
     const x    = 5 + i * cellW;
     const done = day.sport === 'yes';
-    ctx.fillStyle = done ? '#ff1a2e30' : '#0a0000';
+    ctx.fillStyle = done ? '#00d4ff20' : '#0d0d22';
     ctx.fillRect(x, 5, cellW - 2, 20);
     if (done) {
-      ctx.fillStyle = '#ff1a2e'; ctx.fillRect(x, 5, cellW - 2, 2);
-      ctx.shadowColor = '#ff1a2e'; ctx.shadowBlur = 4;
+      ctx.fillStyle = '#00d4ff'; ctx.fillRect(x, 5, cellW - 2, 2);
+      ctx.shadowColor = '#00d4ff'; ctx.shadowBlur = 4;
       ctx.fillRect(x, 5, cellW - 2, 2); ctx.shadowBlur = 0;
     }
   });
@@ -1016,26 +1164,20 @@ function renderDebriefs() {
 
 // ── Settings ──────────────────────────────────────────
 function renderSettings() {
-  document.getElementById('apiKeyInput').value      = settings.apiKey || '';
-  document.getElementById('deepseekKeyInput').value = settings.deepseekKey || '';
-  document.getElementById('userNameInput').value    = settings.userName || '';
+  document.getElementById('userNameInput').value = settings.userName || '';
+  document.getElementById('topicsInput').value   = settings.topics  || 'science, psychology, history, philosophy';
   const p = settings.provider || 'claude';
-  document.querySelectorAll('.provider-btn').forEach(b => b.classList.toggle('active', b.dataset.provider === p));
-  updateProviderStatus();
+  document.querySelectorAll('.provider-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.provider === p)
+  );
   applyPersonalityMode(settings.personality || 'sharp');
-}
-
-function updateProviderStatus() {
-  const el = document.getElementById('providerStatus');
-  if (el) el.textContent = settings.provider === 'deepseek' ? '// DEEPSEEK ACTIVE' : '// CLAUDE ACTIVE';
+  checkServerStatus();
 }
 
 function saveSettingsFn() {
-  settings.apiKey      = document.getElementById('apiKeyInput').value.trim();
-  settings.deepseekKey = document.getElementById('deepseekKeyInput').value.trim();
-  settings.userName    = document.getElementById('userNameInput').value.trim() || 'Friend';
+  settings.userName = document.getElementById('userNameInput').value.trim() || 'Friend';
+  settings.topics   = document.getElementById('topicsInput').value.trim()   || 'science, psychology, history, philosophy';
   JARVISPHINE.saveSettings(settings);
-  updateProviderStatus();
   debouncedSync();
   showToast('// CONFIGURATION SAVED', 'green');
   showScreen('chat');
@@ -1045,12 +1187,12 @@ function saveSettingsFn() {
 function showToast(msg, type = '') {
   const t = document.getElementById('toast');
   t.textContent = msg;
-  t.className = type ? `show ${type}` : 'show';
+  t.className   = type ? `show ${type}` : 'show';
   clearTimeout(t._timer);
   t._timer = setTimeout(() => t.classList.remove('show'), 3000);
 }
 
 // ── Init ──────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  initLockScreen();
+  startApp();
 });

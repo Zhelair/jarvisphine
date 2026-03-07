@@ -1,11 +1,12 @@
 {
-  "name": "jarvisphine-bot",
-  "version": "5.0.0",
-  "description": "Jarvisphine Telegram Bot — companion system",
-  "main": "telegram-bot.js",
+  "name": "jarvisphine",
+  "version": "6.0.0",
+  "description": "Jarvisphine — AI companion system. Backend proxy + Telegram bot.",
+  "main": "server.js",
   "scripts": {
+    "start": "node server.js",
     "bot": "node telegram-bot.js",
-    "bot:dev": "CLAUDE_API_KEY=$CLAUDE_API_KEY node telegram-bot.js"
+    "dev": "CLAUDE_API_KEY=$CLAUDE_API_KEY node server.js"
   },
   "engines": {
     "node": ">=18.0.0"
