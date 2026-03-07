@@ -3,42 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <title>JARVISPHINE // v5.0</title>
+  <title>JARVISPHINE // v6.0</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-
-<!-- ═══════════════════════════════════════════════════ -->
-<!-- LOCK SCREEN                                        -->
-<!-- ═══════════════════════════════════════════════════ -->
-<div id="lockScreen">
-  <div class="lock-reactor">
-    <div class="lock-ring lock-ring-1"></div>
-    <div class="lock-ring lock-ring-2"></div>
-    <div class="lock-ring lock-ring-3"></div>
-    <div class="lock-core"></div>
-  </div>
-  <div class="lock-title">JARVISPHINE</div>
-  <div class="lock-subtitle">// SECURITY CHECKPOINT</div>
-
-  <!-- Enter passphrase mode -->
-  <div id="lockEnterMode">
-    <div class="lock-label">PASSPHRASE</div>
-    <input type="password" id="passphraseInput" placeholder="••••••••" autocomplete="off">
-    <button id="unlockBtn">// AUTHENTICATE</button>
-    <div id="lockError"></div>
-  </div>
-
-  <!-- Set passphrase mode (first launch) -->
-  <div id="lockSetMode">
-    <div class="lock-label">SET PASSPHRASE</div>
-    <input type="password" id="passphraseSetInput" placeholder="Choose passphrase" autocomplete="new-password">
-    <div class="lock-label" style="margin-top:8px">CONFIRM</div>
-    <input type="password" id="passphraseConfirmInput" placeholder="Confirm passphrase" autocomplete="new-password">
-    <button id="setPassphraseBtn">// INITIALIZE SYSTEM</button>
-    <div id="lockError"></div>
-  </div>
-</div>
 
 <!-- ═══════════════════════════════════════════════════ -->
 <!-- BOOT SCREEN                                        -->
@@ -51,7 +19,7 @@
         <div class="boot-arc-inner"></div>
       </div>
     </div>
-    <div id="bootText">INITIALIZING JARVISPHINE v5.0...</div>
+    <div id="bootText">INITIALIZING JARVISPHINE v6.0...</div>
     <div class="boot-progress">
       <div class="boot-progress-fill" id="bootProgressFill"></div>
     </div>
@@ -108,7 +76,7 @@
     <div id="saveStatesList"></div>
     <div style="margin-top:12px; border-top:1px solid var(--border); padding-top:12px;">
       <div style="font-family:'Orbitron',sans-serif;font-size:8px;letter-spacing:2px;color:var(--text3);margin-bottom:8px">CREATE NEW SAVE</div>
-      <input type="text" id="saveStateName" placeholder="Save 01 - March 2026 - Getting back on track" maxlength="60">
+      <input type="text" id="saveStateName" placeholder="Save 01 — March 2026 — Back on track" maxlength="60">
       <div class="modal-buttons">
         <button class="btn-primary" id="createSaveBtn">// SAVE STATE</button>
         <button class="btn-secondary" id="closeSaveModal">CLOSE</button>
@@ -121,10 +89,10 @@
 <!-- HEADER                                             -->
 <!-- ═══════════════════════════════════════════════════ -->
 <header class="header">
-  <div class="header-avatar" id="lockIconBtn" title="Lock system">J</div>
+  <div class="header-avatar">J</div>
   <div class="header-info">
     <h1>Jarvisphine</h1>
-    <p>companion system // v5.0</p>
+    <p>companion system // v6.0</p>
   </div>
   <div class="header-right">
     <div class="mode-badge sharp" id="modeBadge">SHARP</div>
@@ -162,9 +130,8 @@
       </div>
     </div>
 
-    <!-- Circular Threat Reactor -->
+    <!-- Momentum Reactor (was Threat Level) -->
     <div class="threat-reactor-wrap">
-      <!-- SVG defs for glow filter -->
       <svg width="0" height="0" style="position:absolute">
         <defs>
           <filter id="arcGlow" x="-50%" y="-50%" width="200%" height="200%">
@@ -175,13 +142,9 @@
       </svg>
       <div class="threat-svg-wrap">
         <svg class="threat-svg" viewBox="0 0 90 90">
-          <!-- decorative outer -->
           <circle cx="45" cy="45" r="42" class="gauge-deco"/>
-          <!-- track -->
           <circle cx="45" cy="45" r="35" class="gauge-track"/>
-          <!-- arc fill -->
           <circle cx="45" cy="45" r="35" class="gauge-arc" id="threatArc"/>
-          <!-- inner deco -->
           <circle cx="45" cy="45" r="26" class="gauge-deco"/>
         </svg>
         <div class="threat-center-text">
@@ -190,7 +153,7 @@
         </div>
       </div>
       <div class="threat-info-side">
-        <div class="threat-title">// THREAT LEVEL</div>
+        <div class="threat-title">// MOMENTUM</div>
         <div id="threatDesc" style="font-size:12px;color:var(--text2);line-height:1.4;margin-bottom:6px"></div>
         <div class="threat-indicator-dot" id="threatIndicator"></div>
       </div>
@@ -221,6 +184,14 @@
           <div class="stat-value" id="stat-wake">—</div>
         </div>
         <div class="stat-card">
+          <div class="stat-label">// Sleep</div>
+          <div class="stat-value" id="stat-sleep">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">// Energy</div>
+          <div class="stat-value" id="stat-energy">—</div>
+        </div>
+        <div class="stat-card">
           <div class="stat-label">// Outside</div>
           <div class="stat-value" id="stat-outdoor">—</div>
         </div>
@@ -245,7 +216,43 @@
             <div class="streak-label">sport days</div>
           </div>
         </div>
+        <div class="streak-pill">
+          <span class="streak-icon">🌅</span>
+          <div class="streak-info">
+            <div class="streak-num" id="streak-ritual">0</div>
+            <div class="streak-label">morning protocol</div>
+          </div>
+        </div>
       </div>
+    </div>
+
+    <!-- Morning Protocol -->
+    <div class="hud-panel">
+      <div class="panel-label">Morning Protocol</div>
+      <div class="ritual-grid">
+        <button class="ritual-btn" data-ritual="stretch" data-value="yes">🧘 Stretch</button>
+        <button class="ritual-btn" data-ritual="stretch" data-value="no">❌ No stretch</button>
+        <button class="ritual-btn" data-ritual="shower" data-value="yes">🚿 Cold shower</button>
+        <button class="ritual-btn" data-ritual="shower" data-value="no">❌ No shower</button>
+        <button class="ritual-btn" data-ritual="breakfast" data-value="yes">🥗 Good breakfast</button>
+        <button class="ritual-btn" data-ritual="breakfast" data-value="no">❌ Skipped</button>
+        <button class="ritual-btn" data-ritual="meditate" data-value="yes">🧠 Meditated</button>
+        <button class="ritual-btn" data-ritual="meditate" data-value="no">❌ No meditation</button>
+      </div>
+      <div class="morning-score-bar">
+        <div class="morning-score-track">
+          <div class="morning-score-fill" id="morningScoreFill" style="width:0%"></div>
+        </div>
+        <div class="morning-score-label" id="morningScoreLabel">0%</div>
+      </div>
+    </div>
+
+    <!-- Today's Mission Plan -->
+    <div class="hud-panel">
+      <div class="panel-label">Today's Mission</div>
+      <div id="dailyPlanDisplay"></div>
+      <textarea id="dailyPlanInput" placeholder="What's the plan for today? (3 things you'll do...)" maxlength="300"></textarea>
+      <button class="btn-hud" id="savePlanBtn" style="width:100%">⚡ LOCK IN PLAN</button>
     </div>
 
     <!-- Mission Briefing -->
@@ -271,6 +278,8 @@
         <button class="quick-log" data-type="outdoor" data-value="yes">🌿 went out</button>
         <button class="quick-log" data-type="outdoor" data-value="no">🏠 stayed in</button>
         <button class="quick-log" id="wakeTimeQuickBtn" data-type="wake" data-value="prompt">🌅 wake time</button>
+        <button class="quick-log" data-type="sleep" data-value="prompt">😴 sleep hours</button>
+        <button class="quick-log" data-type="energy" data-value="prompt">⚡ energy /10</button>
       </div>
     </div>
 
@@ -300,6 +309,18 @@
     </div>
 
     <div class="hud-panel">
+      <div class="panel-label">Daily Intel Brief</div>
+      <div id="intelBriefText">// tap to get today's learning</div>
+      <button class="btn-hud" id="generateBriefBtn" style="margin-top:8px">🧠 GET BRIEF</button>
+    </div>
+
+    <div class="hud-panel">
+      <div class="panel-label">Pattern Insights</div>
+      <div id="patternInsightsText">// analyze your 30-day data</div>
+      <button class="btn-hud" id="generateInsightsBtn" style="margin-top:8px">🔍 ANALYZE PATTERNS</button>
+    </div>
+
+    <div class="hud-panel">
       <div class="panel-label">7-Day Drinks</div>
       <div class="chart-container">
         <canvas id="drinksChart"></canvas>
@@ -310,6 +331,13 @@
       <div class="panel-label">Mood Timeline</div>
       <div class="chart-container">
         <canvas id="moodChart"></canvas>
+      </div>
+    </div>
+
+    <div class="hud-panel">
+      <div class="panel-label">Energy & Sleep // 7 Days</div>
+      <div class="chart-container">
+        <canvas id="energyChart"></canvas>
       </div>
     </div>
 
@@ -365,16 +393,53 @@
 <div class="screen" id="screen-settings">
   <div class="settings-scroll">
 
+    <!-- Server Status -->
+    <div class="settings-card">
+      <h3>System Status</h3>
+      <div class="server-status">
+        <div class="server-dot offline" id="serverDot"></div>
+        <span id="serverStatusText" style="color:var(--text2)">Checking server...</span>
+      </div>
+      <p>AI calls are proxied through the backend server. Run: <code style="color:var(--blue);font-size:10px">CLAUDE_API_KEY=sk-ant-... node server.js</code></p>
+      <div id="providerStatus" style="font-family:'Orbitron',sans-serif;font-size:7px;letter-spacing:2px;color:var(--green);margin-top:4px"></div>
+    </div>
+
     <!-- Personality Mode -->
     <div class="settings-card">
       <h3>Personality Mode</h3>
       <p>How Jarvisphine talks to you.</p>
       <div class="personality-modes">
-        <button class="mode-btn soft"      data-mode="soft">SOFT<br><span style="font-size:6px;opacity:0.7">warm &amp; nurturing</span></button>
+        <button class="mode-btn soft"       data-mode="soft">SOFT<br><span style="font-size:6px;opacity:0.7">warm &amp; nurturing</span></button>
         <button class="mode-btn sharp active" data-mode="sharp">SHARP<br><span style="font-size:6px;opacity:0.7">witty &amp; flirty</span></button>
-        <button class="mode-btn noexcuses" data-mode="noexcuses">NO EXCUSES<br><span style="font-size:6px;opacity:0.7">zero tolerance</span></button>
+        <button class="mode-btn noexcuses"  data-mode="noexcuses">NO EXCUSES<br><span style="font-size:6px;opacity:0.7">zero tolerance</span></button>
       </div>
     </div>
+
+    <!-- AI Provider -->
+    <div class="settings-card">
+      <h3>AI Provider</h3>
+      <p>Preference sent to server (server must have the key configured).</p>
+      <div class="provider-toggle">
+        <button class="provider-btn active" data-provider="claude">Claude</button>
+        <button class="provider-btn" data-provider="deepseek">DeepSeek</button>
+      </div>
+    </div>
+
+    <!-- Intel Brief Topics -->
+    <div class="settings-card">
+      <h3>Intel Brief Topics</h3>
+      <p>What topics should Jarvisphine teach you about? Comma-separated.</p>
+      <input type="text" class="input-field" id="topicsInput" placeholder="science, philosophy, history, psychology">
+    </div>
+
+    <!-- Your Name -->
+    <div class="settings-card">
+      <h3>Your Name</h3>
+      <p>What should she call you?</p>
+      <input type="text" class="input-field" id="userNameInput" placeholder="Friend">
+    </div>
+
+    <button class="btn-primary" id="saveSettings">// SAVE CONFIGURATION</button>
 
     <!-- Data Management -->
     <div class="settings-card">
@@ -393,48 +458,6 @@
       <h3>Supabase Sync</h3>
       <p>Auto-syncs all data to cloud. No manual action needed.</p>
       <button class="btn-hud" id="forceSyncBtn" style="width:100%;margin-top:4px">🔄 FORCE SYNC NOW</button>
-    </div>
-
-    <!-- AI Provider -->
-    <div class="settings-card">
-      <h3>AI Provider</h3>
-      <p>Claude or DeepSeek — both work great.</p>
-      <div class="provider-toggle">
-        <button class="provider-btn active" data-provider="claude">Claude</button>
-        <button class="provider-btn" data-provider="deepseek">DeepSeek</button>
-      </div>
-      <div id="providerStatus">// CLAUDE ACTIVE</div>
-    </div>
-
-    <!-- Claude API Key -->
-    <div class="settings-card">
-      <h3>Claude API Key</h3>
-      <p>Get at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></p>
-      <input type="password" class="input-field" id="apiKeyInput" placeholder="sk-ant-...">
-    </div>
-
-    <!-- DeepSeek API Key -->
-    <div class="settings-card">
-      <h3>DeepSeek API Key</h3>
-      <p>Get at <a href="https://platform.deepseek.com" target="_blank">platform.deepseek.com</a></p>
-      <input type="password" class="input-field" id="deepseekKeyInput" placeholder="sk-...">
-    </div>
-
-    <!-- Your Name -->
-    <div class="settings-card">
-      <h3>Your Name</h3>
-      <p>What should she call you?</p>
-      <input type="text" class="input-field" id="userNameInput" placeholder="Friend">
-    </div>
-
-    <button class="btn-primary" id="saveSettings">// SAVE CONFIGURATION</button>
-
-    <!-- Change Passphrase -->
-    <div class="settings-card">
-      <h3>Security</h3>
-      <p>Change your lock screen passphrase.</p>
-      <input type="password" class="input-field" id="newPassInput" placeholder="New passphrase">
-      <button class="btn-hud" id="changePassBtn" style="width:100%;margin-top:4px">// CHANGE PASSPHRASE</button>
     </div>
 
     <!-- Danger Zone -->

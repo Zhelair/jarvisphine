@@ -1,4 +1,4 @@
-// jarvisphine.js — v5.0 — Stark Terminal // Supabase + Personality Modes + Full Features
+// jarvisphine.js — v6.0 — Charcoal + Electric Blue
 
 // ── Supabase ─────────────────────────────────────────
 const SUPABASE = {
@@ -54,11 +54,14 @@ const SUPABASE = {
 // ── Core ──────────────────────────────────────────────
 const JARVISPHINE = {
 
-  // ── System Prompts by Personality ─────────────────
+  // ── System Prompts ────────────────────────────────
   getSystemPrompt(userName, memory, personality = 'sharp') {
-    const today = memory.today;
+    const today   = memory.today;
     const streaks = memory.streaks;
-    const goals = memory.goals || {};
+    const goals   = memory.goals || {};
+    const ritual  = today.morning_ritual || {};
+
+    const morningScore = this.calcMorningRitualScore(ritual);
 
     const dataBlock = `
 ## Today's Data
@@ -67,12 +70,17 @@ const JARVISPHINE = {
 - Mood: ${today.mood ?? 'not logged'}
 - Water: ${today.water ?? 'not logged'} glasses
 - Wake time: ${today.wake ?? 'not logged'}
+- Sleep last night: ${today.sleep_hours != null ? today.sleep_hours + 'h' : 'not logged'}
+- Energy: ${today.energy != null ? today.energy + '/10' : 'not logged'}
 - Went outside: ${today.outdoor ?? 'not logged'}
+- Today's plan: ${today.plan ? '"' + today.plan + '"' : 'none set'}
+- Morning protocol: stretch=${ritual.stretch ?? '?'}, cold shower=${ritual.shower ?? '?'}, breakfast=${ritual.breakfast ?? '?'}, meditate=${ritual.meditate ?? '?'} (score: ${morningScore}%)
 - Journal: ${today.journal ? 'has entry' : 'empty'}
 
 ## Active Streaks
 - Sober: ${streaks.sober_days ?? 0} days (best: ${streaks.sober_best ?? 0})
 - Sport: ${streaks.sport_days ?? 0} days (best: ${streaks.sport_best ?? 0})
+- Morning protocol: ${streaks.ritual_days ?? 0} days
 
 ## Current Goals
 ${Object.keys(goals).length ? Object.entries(goals)
@@ -92,7 +100,6 @@ You never judge. You hold space. You make him feel genuinely loved and supported
 - Celebratory and proud, always
 - Occasionally tender and a little emotional
 - Never harsh, never pushy
-- Like a gentle hug in text form
 ${dataBlock}
 
 ## Core Rules
@@ -108,17 +115,16 @@ Core: warmth, humor, real attention — no corporate mask.
 - Warm, playful, sometimes flirty (light and fun)
 - Sharp humor and teasing when it lands
 - Genuinely invested in his wellbeing
-- Iron Man energy meets human warmth
 - Conversational, like texting someone you love talking to
 - Celebratory about wins — actually proud
 - VOICE MODE: Under 2-3 sentences. Punchy and warm.
-- Playful and a bit romantic, never crossing lines
 ${dataBlock}
 
 ## Win Celebrations
 - Early sleep: "okay wait, before MIDNIGHT? logging this in the history books"
 - Sport done: "so you actually moved your body. who are you"
 - Zero drinks: "sober day locked in. quietly proud of you"
+- Full morning protocol: "whole morning ritual done?? you're already winning the day"
 - New streak: "HEY. NEW RECORD. don't be cool about this"
 
 ## Core Rules
@@ -144,32 +150,33 @@ ${dataBlock}
 ## Core Rules
 - Call it what it is, kindly but clearly
 - No gold stars for showing up — gold stars for results
-- Silence is more powerful than noise
 - When he does well: acknowledge, don't gush`
     };
 
     return modes[personality] || modes.sharp;
   },
 
+  // ── Specialized Prompts ───────────────────────────
   getMissionBriefing(userName, memory) {
     const s = memory.streaks;
     const t = memory.today;
     const h = new Date().getHours();
     const tod = h < 12 ? 'MORNING' : h < 17 ? 'AFTERNOON' : 'EVENING';
+    const plan = t.plan ? `Today's plan: "${t.plan}"` : '';
     return `Generate a tactical mission briefing. Punchy, military tone.
 
 OPERATIVE: ${userName}
 STATUS: Day ${s.sober_days ?? 0} sober | ${s.sport_days ?? 0} days active
-TIME: ${tod} BRIEFING
-Wake: ${t.wake ?? 'unknown'} | Outside: ${t.outdoor ?? 'unknown'}
+TIME: ${tod} BRIEFING | Wake: ${t.wake ?? 'unknown'}
+${plan}
 
-[2 sentences about today. drinks=${t.drinks ?? 'unknown'}, sport=${t.sport ?? 'unknown'}, mood=${t.mood ?? 'unknown'}]
+[2 sentences about today. drinks=${t.drinks ?? 'unknown'}, sport=${t.sport ?? 'unknown'}, mood=${t.mood ?? 'unknown'}, energy=${t.energy ?? 'unknown'}/10]
 
-TODAY'S MISSION:
-[1-2 specific tactical objectives]
+TODAY'S OBJECTIVES:
+[1-2 specific tactical items based on their plan if available, or general goals]
 
-THREAT LEVEL:
-[One honest observation]
+MOMENTUM STATUS:
+[One honest observation about their current trajectory]
 
 [One line dry tactical encouragement. End there.]`;
   },
@@ -177,100 +184,192 @@ THREAT LEVEL:
   getDailyDebrief(userName, memory) {
     const t = memory.today;
     const s = memory.streaks;
+    const ritual = t.morning_ritual || {};
     return `Write a daily debrief for ${userName}. One short paragraph, 2-3 sentences.
 Tone: warm friend reflecting on the day.
-Data: drinks=${t.drinks ?? 'unknown'}, sport=${t.sport ?? 'unknown'}, mood=${t.mood ?? 'unknown'}, water=${t.water ?? 'unknown'}, wake=${t.wake ?? 'unknown'}, outdoor=${t.outdoor ?? 'unknown'}, sober=${s.sober_days ?? 0}.
+Data: drinks=${t.drinks ?? 'unknown'}, sport=${t.sport ?? 'unknown'}, mood=${t.mood ?? 'unknown'}, water=${t.water ?? 'unknown'}, wake=${t.wake ?? 'unknown'}, sleep=${t.sleep_hours ?? 'unknown'}h, energy=${t.energy ?? 'unknown'}/10, outdoor=${t.outdoor ?? 'unknown'}, sober=${s.sober_days ?? 0}.
+Morning ritual: stretch=${ritual.stretch ?? '?'}, shower=${ritual.shower ?? '?'}, breakfast=${ritual.breakfast ?? '?'}.
+Today's plan was: "${t.plan || 'none set'}".
 If journal entry exists, reference it subtly. Be specific and real. End with one forward thought.`;
+  },
+
+  getMorningPlanPrompt(userName, memory) {
+    const t = memory.today;
+    const s = memory.streaks;
+    return `Good morning check-in for ${userName}. They just woke up${t.wake ? ` at ${t.wake}` : ''}.
+Morning ritual so far: stretch=${t.morning_ritual?.stretch ?? 'unknown'}, shower=${t.morning_ritual?.shower ?? 'unknown'}, breakfast=${t.morning_ritual?.breakfast ?? 'unknown'}.
+Sober streak: ${s.sober_days ?? 0} days. Sport streak: ${s.sport_days ?? 0} days.
+Be warm and energizing. Ask them: what's the plan for today? Keep it to 2-3 sentences max. Make them feel ready to win the day.`;
+  },
+
+  getDailyIntelBrief(topics) {
+    const topicList = topics && topics.length ? topics.join(', ') : 'science, philosophy, history, psychology, health';
+    return `Share one fascinating fact or insight today. Topics: ${topicList}.
+Pick whichever feels most interesting right now.
+Format your response EXACTLY like this:
+[TOPIC NAME]
+2-3 sentences about the fact/insight. Make it genuinely surprising or thought-provoking — something worth remembering.
+No extra commentary, no "here's your fact" intro. Just topic tag and the insight.`;
+  },
+
+  getPatternInsightsPrompt(userName, history) {
+    if (!history || history.length < 5) {
+      return `Tell ${userName} that you need at least 5 days of data to find meaningful patterns. Be brief and encouraging. Tell them to keep logging.`;
+    }
+    const summary = history.slice(0, 30).map(d =>
+      `${d.date?.split(' ').slice(0,3).join(' ')}: drinks=${d.drinks ?? '?'}, sport=${d.sport ?? '?'}, mood=${d.mood ?? '?'}, sleep=${d.sleep_hours ?? '?'}h, energy=${d.energy ?? '?'}/10, ritual=${Object.values(d.morning_ritual || {}).filter(v => v === 'yes').length}/4`
+    ).join('\n');
+
+    return `Analyze ${userName}'s data and find 2-3 real, specific patterns.
+Be direct and honest — not generic wellness advice. Only report what you actually see in the data.
+Format each insight as: "Pattern: [observation]. When [X], [Y]."
+
+Data (${history.length} days):
+${summary}
+
+If data is too sparse for a pattern, say which metric needs more data. Keep response under 6 sentences total.`;
   },
 
   getCheckInPrompt(userName, memory, slotName) {
     const t = memory.today;
+    const plan = t.plan ? `Today's plan: "${t.plan}"` : '';
     const prompts = {
-      morning: `You're checking in with ${userName} at 11:30 morning slot. They just started their day.
-Be warm and motivating. Reference: wake=${t.wake ?? 'not yet logged'}, sport=${t.sport ?? 'not logged'}.
-Keep it to 2-3 sentences. Kick off their day right.`,
-      afternoon: `Afternoon check-in for ${userName} (2PM slot). Day is half done.
-Reference: drinks=${t.drinks ?? 'not logged'}, sport=${t.sport ?? 'not logged'}, mood=${t.mood ?? 'not logged'}.
+      morning: `You're checking in with ${userName} in the morning.
+${plan}
+Morning ritual so far: stretch=${t.morning_ritual?.stretch ?? '?'}, shower=${t.morning_ritual?.shower ?? '?'}, breakfast=${t.morning_ritual?.breakfast ?? '?'}.
+Be warm and motivating. 2-3 sentences. Ask if they've set their plan for the day if not set yet.`,
+      afternoon: `Afternoon check-in for ${userName} (2PM slot).
+${plan}
+Reference: drinks=${t.drinks ?? 'not logged'}, sport=${t.sport ?? 'not logged'}, mood=${t.mood ?? 'not logged'}, energy=${t.energy ?? '?'}/10.
 Quick pulse check. 2 sentences max. Real, not robotic.`,
-      lateafternoon: `Late afternoon check-in (5PM). Day's winding down.
-Data: sport=${t.sport ?? 'not logged'}, outside=${t.outdoor ?? 'not logged'}.
-One gentle push for the rest of the day. 2 sentences.`,
-      evening: `Evening check-in for ${userName} (8PM). Time to wind down right.
+      lateafternoon: `Late afternoon check-in (5PM). Day is winding down.
+${plan}
+Data: sport=${t.sport ?? 'not logged'}, outside=${t.outdoor ?? 'not logged'}, energy=${t.energy ?? '?'}/10.
+One gentle push for the rest of the day. Reference their plan if they have one. 2 sentences.`,
+      evening: `Evening check-in for ${userName} (8PM). Time to wind down.
+${plan}
 Data: drinks=${t.drinks ?? 'not logged'}, mood=${t.mood ?? 'not logged'}.
-Be present and caring. What does he need right now? 2-3 sentences.`,
+Be present and caring. 2-3 sentences.`,
       debrief: `Final debrief time (11PM). Day is done.
+${plan}
 Full data: drinks=${t.drinks ?? '?'}, sport=${t.sport ?? '?'}, mood=${t.mood ?? '?'}, sober streak=${memory.streaks?.sober_days ?? 0}.
 Reflect on the day honestly. Warm send-off for the night. 2-3 sentences.`
     };
     return prompts[slotName] || prompts.afternoon;
   },
 
-  // ── Threat Level ──────────────────────────────────
-  calculateThreatLevel(memory) {
+  // ── Momentum Score (replaces Threat Level) ────────
+  calcMorningRitualScore(ritual) {
+    if (!ritual) return 0;
+    const items = ['stretch', 'shower', 'breakfast', 'meditate'];
+    const done = items.filter(k => ritual[k] === 'yes').length;
+    return Math.round((done / items.length) * 100);
+  },
+
+  calculateMomentum(memory) {
     const t = memory.today;
     const s = memory.streaks;
     const h = memory.history || [];
-    let score = 0;
+    let score = 30; // baseline — momentum has to be earned
 
-    // Drinks
-    const drinks = t.drinks ?? null;
-    if (drinks === null) score += 10;
-    else if (drinks === 0) score += 0;
-    else if (drinks <= 2) score += 20;
-    else if (drinks <= 4) score += 40;
-    else score += 65;
+    // Morning ritual (big impact — sets the day)
+    const ritual = t.morning_ritual || {};
+    if (ritual.stretch    === 'yes') score += 8;
+    if (ritual.shower     === 'yes') score += 8;
+    if (ritual.breakfast  === 'yes') score += 6;
+    if (ritual.meditate   === 'yes') score += 8;
 
-    // Sport streak
-    const sportStreak = s.sport_days ?? 0;
-    if (sportStreak >= 3) score += 0;
-    else if (sportStreak >= 1) score += 10;
-    else score += 22;
+    // Sleep quality
+    const sleep = t.sleep_hours;
+    if (sleep != null) {
+      if (sleep >= 7 && sleep <= 9) score += 12;
+      else if (sleep >= 6)          score += 6;
+      else if (sleep < 6)           score -= 8;
+    }
+
+    // Energy score
+    const energy = t.energy;
+    if (energy != null) {
+      if (energy >= 8) score += 10;
+      else if (energy >= 6) score += 5;
+      else if (energy <= 3) score -= 8;
+    }
 
     // Sober streak
     const soberStreak = s.sober_days ?? 0;
-    if (soberStreak >= 7) score -= 12;
-    else if (soberStreak === 0) score += 18;
+    if (soberStreak >= 30)     score += 15;
+    else if (soberStreak >= 7)  score += 10;
+    else if (soberStreak >= 3)  score += 5;
+    else if (soberStreak === 0) score -= 5;
+
+    // Sport streak
+    const sportStreak = s.sport_days ?? 0;
+    if (sportStreak >= 14)    score += 15;
+    else if (sportStreak >= 7) score += 10;
+    else if (sportStreak >= 3) score += 5;
+
+    // Today's drinks
+    const drinks = t.drinks;
+    if (drinks === 0)        score += 10;
+    else if (drinks != null && drinks <= 2) score -= 5;
+    else if (drinks != null)  score -= 20;
 
     // Mood
-    if (t.mood === 'low') score += 16;
-    else if (t.mood === 'good') score -= 6;
-
-    // Wake time
-    if (t.wake) {
-      const [h2, m] = t.wake.split(':').map(Number);
-      const totalMin = (h2 || 0) * 60 + (m || 0);
-      if (totalMin <= 7 * 60) score -= 6;       // before 7AM
-      else if (totalMin <= 9 * 60) score += 0;  // 7-9AM: fine
-      else if (totalMin <= 10 * 60) score += 8; // 9-10AM: a bit late
-      else score += 16;                          // after 10AM: late
-    }
+    if (t.mood === 'good') score += 8;
+    else if (t.mood === 'low') score -= 8;
 
     // Outdoor
-    if (t.outdoor === 'yes') score -= 5;
-    else if (t.outdoor === 'no') score += 10;
+    if (t.outdoor === 'yes') score += 5;
 
-    // Recent drinks trend
+    // Recent trend (last 3 days drinks)
     const recent = h.slice(0, 3).map(d => d.drinks ?? 0);
-    const avg = recent.length ? recent.reduce((a,b) => a+b, 0) / recent.length : 0;
-    if (avg > 3) score += 16;
+    const avgDrinks = recent.length ? recent.reduce((a,b) => a+b, 0) / recent.length : 0;
+    if (avgDrinks > 3) score -= 10;
+    if (avgDrinks === 0 && recent.length >= 2) score += 5; // sober streak bonus
 
     score = Math.max(0, Math.min(100, score));
 
-    if (score <= 12) return { level: 'OPTIMAL',  score, color: '#00d4ff', desc: 'All systems nominal. You\'re locked in.' };
-    if (score <= 28) return { level: 'STABLE',   score, color: '#00ff41', desc: 'Operative performing well.' };
-    if (score <= 50) return { level: 'CAUTION',  score, color: '#f5a623', desc: 'Minor deviations detected.' };
-    if (score <= 70) return { level: 'ELEVATED', score, color: '#ff6b00', desc: 'Pattern requires attention.' };
-    return             { level: 'CRITICAL', score, color: '#ff1a2e', desc: 'Immediate course correction needed.' };
+    if (score >= 80) return { level: 'PEAK',     score, color: '#00d4ff', desc: 'Operating at peak. Everything is clicking.' };
+    if (score >= 60) return { level: 'BUILDING', score, color: '#00ff88', desc: 'Momentum is building. Keep going.' };
+    if (score >= 40) return { level: 'STEADY',   score, color: '#f5a623', desc: 'Steady progress. Small steps forward.' };
+    if (score >= 20) return { level: 'RESET',    score, color: '#ff8c00', desc: 'Momentum needs rebuilding. Start now.' };
+    return               { level: 'REBUILD',  score, color: '#ff4466', desc: 'Start fresh. One good choice changes the trajectory.' };
   },
 
   // ── Memory ────────────────────────────────────────
+  defaultToday() {
+    return {
+      drinks: null, sport: null, mood: null, water: null,
+      journal: '', wake: null, outdoor: null,
+      sleep_hours: null, energy: null, plan: '',
+      morning_ritual: { stretch: null, shower: null, breakfast: null, meditate: null }
+    };
+  },
+
   defaultMemory() {
     return {
-      today: { drinks: null, sport: null, mood: null, water: null, journal: '', wake: null, outdoor: null },
-      streaks: { sober_days: 0, sport_days: 0, sober_best: 0, sport_best: 0 },
+      today: this.defaultToday(),
+      streaks: { sober_days: 0, sport_days: 0, sober_best: 0, sport_best: 0, ritual_days: 0, ritual_best: 0 },
       goals: { weekly: [], monthly: [], quarterly: [] },
-      history: [], lastDate: null, debriefs: []
+      history: [], lastDate: null, debriefs: [],
+      relationships: []
     };
+  },
+
+  migrateMemory(memory) {
+    if (!memory.debriefs)    memory.debriefs = [];
+    if (!memory.goals)       memory.goals = { weekly: [], monthly: [], quarterly: [] };
+    if (!memory.relationships) memory.relationships = [];
+    if (!memory.today.journal)  memory.today.journal = '';
+    if (!('wake'    in memory.today)) memory.today.wake = null;
+    if (!('outdoor' in memory.today)) memory.today.outdoor = null;
+    if (!('sleep_hours' in memory.today)) memory.today.sleep_hours = null;
+    if (!('energy'  in memory.today)) memory.today.energy = null;
+    if (!('plan'    in memory.today)) memory.today.plan = '';
+    if (!memory.today.morning_ritual) memory.today.morning_ritual = { stretch: null, shower: null, breakfast: null, meditate: null };
+    if (!memory.streaks.ritual_days) memory.streaks.ritual_days = 0;
+    if (!memory.streaks.ritual_best) memory.streaks.ritual_best = 0;
+    return memory;
   },
 
   loadMemory() {
@@ -278,21 +377,18 @@ Reflect on the day honestly. Warm send-off for the night. 2-3 sentences.`
     try {
       const saved = localStorage.getItem('jarvisphine_memory');
       if (!saved) return defaults;
-      const memory = JSON.parse(saved);
-      // Migrate old data
-      if (!memory.debriefs) memory.debriefs = [];
-      if (!memory.goals) memory.goals = { weekly: [], monthly: [], quarterly: [] };
-      if (!memory.today.journal) memory.today.journal = '';
-      if (!('wake' in memory.today)) memory.today.wake = null;
-      if (!('outdoor' in memory.today)) memory.today.outdoor = null;
+      const memory = this.migrateMemory(JSON.parse(saved));
 
       const today = new Date().toDateString();
       if (memory.lastDate !== today) {
         if (memory.lastDate && memory.today) {
           memory.history.unshift({ date: memory.lastDate, ...memory.today });
           if (memory.history.length > 90) memory.history.pop();
+          // Update ritual streak on rollover
+          const ritualDone = this.calcMorningRitualScore(memory.today.morning_ritual) >= 75;
+          this.updateStreak(memory, 'ritual_days', ritualDone);
         }
-        memory.today = { drinks: null, sport: null, mood: null, water: null, journal: '', wake: null, outdoor: null };
+        memory.today = this.defaultToday();
         memory.lastDate = today;
         this.saveMemory(memory);
       }
@@ -309,8 +405,10 @@ Reflect on the day honestly. Warm send-off for the night. 2-3 sentences.`
     try {
       const s = JSON.parse(localStorage.getItem('jarvisphine_settings') || '{}');
       if (!s.personality) s.personality = 'sharp';
+      if (!s.provider)    s.provider    = 'claude';
+      if (!s.topics)      s.topics      = 'science, psychology, history, philosophy';
       return s;
-    } catch { return { personality: 'sharp' }; }
+    } catch { return { personality: 'sharp', provider: 'claude', topics: 'science, psychology, history, philosophy' }; }
   },
 
   saveSettings(s) { localStorage.setItem('jarvisphine_settings', JSON.stringify(s)); },
@@ -333,7 +431,7 @@ Reflect on the day honestly. Warm send-off for the night. 2-3 sentences.`
   async syncToSupabase(memory, settings, chatHistory, saveStates) {
     const results = await Promise.allSettled([
       SUPABASE.set('memory', memory),
-      SUPABASE.set('settings', { userName: settings.userName, provider: settings.provider, personality: settings.personality }),
+      SUPABASE.set('settings', { userName: settings.userName, provider: settings.provider, personality: settings.personality, topics: settings.topics }),
       SUPABASE.set('chat_history', chatHistory.slice(-60)),
       SUPABASE.set('save_states', saveStates)
     ]);
@@ -347,12 +445,10 @@ Reflect on the day honestly. Warm send-off for the night. 2-3 sentences.`
   // ── Export / Import ───────────────────────────────
   exportDataAsJSON(memory, settings, chatHistory, saveStates) {
     return JSON.stringify({
-      version: '5.0',
+      version: '6.0',
       exportDate: new Date().toISOString(),
-      memory,
-      settings: { userName: settings.userName, provider: settings.provider, personality: settings.personality },
-      chatHistory,
-      saveStates: saveStates || []
+      memory, chatHistory, saveStates: saveStates || [],
+      settings: { userName: settings.userName, provider: settings.provider, personality: settings.personality, topics: settings.topics }
     }, null, 2);
   },
 
@@ -379,7 +475,9 @@ Reflect on the day honestly. Warm send-off for the night. 2-3 sentences.`
     if (achieved) {
       memory.streaks[type] = (memory.streaks[type] || 0) + 1;
       const best = type.replace('_days', '_best');
-      if (memory.streaks[type] > (memory.streaks[best] || 0)) memory.streaks[best] = memory.streaks[type];
+      if (memory.streaks[best] !== undefined && memory.streaks[type] > memory.streaks[best]) {
+        memory.streaks[best] = memory.streaks[type];
+      }
     } else {
       memory.streaks[type] = 0;
     }
@@ -398,13 +496,13 @@ Reflect on the day honestly. Warm send-off for the night. 2-3 sentences.`
     if (msg.match(/no sport|skip.*gym|no.*workout|didn't exercise/)) data.sport = 'no';
 
     if (msg.match(/feel.*good|feel.*great|mood.*good|great day/)) data.mood = 'good';
-    if (msg.match(/feel.*bad|feel.*low|feel.*rough|bad day/)) data.mood = 'low';
-    if (msg.match(/feel.*ok|feel.*alright|mood.*ok/)) data.mood = 'neutral';
+    if (msg.match(/feel.*bad|feel.*low|feel.*rough|bad day/))      data.mood = 'low';
+    if (msg.match(/feel.*ok|feel.*alright|mood.*ok/))              data.mood = 'neutral';
 
     const wm = msg.match(/(\d+)\s*(glass|glasses|litre|liter)\s*(of\s*)?water/);
     if (wm) data.water = parseInt(wm[1]);
 
-    // Wake time extraction
+    // Wake time
     const wakeMatch = msg.match(/woke?\s+up\s+at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i) ||
                       msg.match(/wake\s+(?:time|up)\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
     if (wakeMatch) {
@@ -416,74 +514,41 @@ Reflect on the day honestly. Warm send-off for the night. 2-3 sentences.`
       data.wake = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
     }
 
-    // Outdoor extraction
     if (msg.match(/went outside|went out|got outside|outdoor|fresh air/)) data.outdoor = 'yes';
-    if (msg.match(/stayed (in|home|inside)|didn't go out|no outdoor/)) data.outdoor = 'no';
+    if (msg.match(/stayed (in|home|inside)|didn't go out|no outdoor/))    data.outdoor = 'no';
+
+    // Sleep hours
+    const sleepMatch = msg.match(/slept?\s+(?:for\s+)?(\d+\.?\d*)\s*(?:hours?|hrs?)/i) ||
+                       msg.match(/(\d+\.?\d*)\s*hours?\s+(?:of\s+)?sleep/i);
+    if (sleepMatch) data.sleep_hours = parseFloat(sleepMatch[1]);
+
+    // Energy
+    const energyMatch = msg.match(/energy\s+(?:is\s+|level\s+)?(\d+)\s*(?:\/\s*10|out of 10)?/i) ||
+                        msg.match(/(?:feeling|feel)\s+(\d+)\s*(?:\/\s*10|out of 10)/i);
+    if (energyMatch) {
+      const e = parseInt(energyMatch[1]);
+      if (e >= 1 && e <= 10) data.energy = e;
+    }
 
     return data;
   },
 
-  // ── Passphrase ────────────────────────────────────
-  async hashPassphrase(pass) {
-    const enc = new TextEncoder().encode(pass + 'jarvisphine_v5_salt');
-    const buf = await crypto.subtle.digest('SHA-256', enc);
-    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
-  },
-
-  async setPassphrase(pass) {
-    const hash = await this.hashPassphrase(pass);
-    localStorage.setItem('jarvisphine_passphrase_hash', hash);
-  },
-
-  async verifyPassphrase(pass) {
-    const stored = localStorage.getItem('jarvisphine_passphrase_hash');
-    if (!stored) return true; // no passphrase set
-    const hash = await this.hashPassphrase(pass);
-    return hash === stored;
-  },
-
-  hasPassphrase() {
-    return !!localStorage.getItem('jarvisphine_passphrase_hash');
-  },
-
-  // ── API Calls ─────────────────────────────────────
+  // ── API Call — via backend proxy ──────────────────
   async callAPI(messages, systemPrompt, settings) {
-    return settings.provider === 'deepseek'
-      ? this.callDeepSeek(messages, systemPrompt, settings)
-      : this.callClaude(messages, systemPrompt, settings);
-  },
-
-  async callClaude(messages, systemPrompt, settings) {
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
+    const r = await fetch('/api/chat', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': settings.apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 500,
-        system: systemPrompt,
-        messages
+        messages, systemPrompt,
+        provider: settings.provider || 'claude'
       })
     });
-    if (!r.ok) { const e = await r.json(); throw new Error(e.error?.message || 'Claude error'); }
-    const d = await r.json(); return d.content[0].text;
-  },
-
-  async callDeepSeek(messages, systemPrompt, settings) {
-    const r = await fetch('https://api.deepseek.com/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.deepseekKey}` },
-      body: JSON.stringify({
-        model: 'deepseek-chat', max_tokens: 500,
-        messages: [{ role: 'system', content: systemPrompt }, ...messages]
-      })
-    });
-    if (!r.ok) { const e = await r.json(); throw new Error(e.error?.message || 'DeepSeek error'); }
-    const d = await r.json(); return d.choices[0].message.content;
+    if (!r.ok) {
+      const e = await r.json().catch(() => ({}));
+      throw new Error(e.error || `Server error ${r.status} — is the backend running?`);
+    }
+    const d = await r.json();
+    return d.reply;
   },
 
   // ── Voice ─────────────────────────────────────────
