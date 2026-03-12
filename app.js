@@ -282,6 +282,20 @@ function initEventListeners() {
   document.getElementById('generateBriefBtn').addEventListener('click', generateIntelBrief);
   document.getElementById('generateInsightsBtn').addEventListener('click', generatePatternInsights);
 
+  // Passphrase / lock
+  document.getElementById('lockBtn')?.addEventListener('click', () => {
+    if (!confirm('Lock Jarvisphine? You will need your passphrase to access your data again.')) return;
+    NAMESPACE.clear();
+    location.reload();
+  });
+  document.getElementById('changePassBtn')?.addEventListener('click', () => {
+    const newPass = prompt('Enter new passphrase (your data will move to the new passphrase namespace):');
+    if (!newPass || !newPass.trim()) return;
+    NAMESPACE.set(newPass.trim());
+    debouncedSync();
+    showToast('// PASSPHRASE UPDATED', 'green');
+  });
+
   window.speechSynthesis?.addEventListener('voiceschanged', () => {});
 }
 
@@ -1192,7 +1206,53 @@ function showToast(msg, type = '') {
   t._timer = setTimeout(() => t.classList.remove('show'), 3000);
 }
 
+// ── Passphrase Gate ───────────────────────────────────
+function initPassphrase() {
+  const overlay = document.getElementById('passphraseOverlay');
+  const input   = document.getElementById('passphraseInput');
+  const btn     = document.getElementById('passphraseBtn');
+
+  const canvas = document.getElementById('passphraseCanvas');
+  const ctx    = canvas.getContext('2d');
+  canvas.width  = overlay.offsetWidth  || 480;
+  canvas.height = overlay.offsetHeight || 800;
+  const cols  = Math.floor(canvas.width / 14);
+  const drops = Array(cols).fill(1);
+  const chars = 'JARVISPHINE01アカサタナハマヤ'.split('');
+  const matrixInterval = setInterval(() => {
+    ctx.fillStyle = 'rgba(0,0,0,0.05)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = 'rgba(0,212,255,0.5)';
+    ctx.font = '13px monospace';
+    drops.forEach((y, i) => {
+      const ch = chars[Math.floor(Math.random() * chars.length)];
+      ctx.fillText(ch, i * 14, y * 14);
+      if (y * 14 > canvas.height && Math.random() > 0.975) drops[i] = 0;
+      drops[i]++;
+    });
+  }, 40);
+
+  function submit() {
+    const val = input.value.trim();
+    if (!val) { input.classList.add('error'); setTimeout(() => input.classList.remove('error'), 600); return; }
+    clearInterval(matrixInterval);
+    NAMESPACE.set(val);
+    overlay.style.opacity = '0';
+    overlay.style.transition = 'opacity 0.6s';
+    setTimeout(() => { overlay.style.display = 'none'; startApp(); }, 600);
+  }
+
+  btn.addEventListener('click', submit);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+}
+
 // ── Init ──────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  startApp();
+  if (NAMESPACE.isSet()) {
+    document.getElementById('passphraseOverlay').style.display = 'none';
+    startApp();
+  } else {
+    document.getElementById('bootOverlay').style.display = 'none';
+    initPassphrase();
+  }
 });
