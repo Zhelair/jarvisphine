@@ -153,12 +153,12 @@ async function checkServerStatus() {
     if (!r.ok) throw new Error('offline');
     const d = await r.json();
     if (dot)  { dot.className  = 'server-dot online'; }
-    if (text) { text.textContent = 'Backend server online ✓'; text.style.color = 'var(--green)'; }
-    if (prov) { prov.textContent = `// AI: ${d.provider?.toUpperCase() || 'UNKNOWN'}`; }
+    if (text) { text.textContent = 'Vercel backend online ✓'; text.style.color = 'var(--green)'; }
+    if (prov) { prov.textContent = `// AI: ${d.provider?.toUpperCase() || 'DEEPSEEK'}`; }
   } catch {
     if (dot)  { dot.className  = 'server-dot offline'; }
-    if (text) { text.textContent = 'Backend offline — AI unavailable'; text.style.color = 'var(--red)'; }
-    if (prov) { prov.textContent = '// RUN: node server.js'; }
+    if (text) { text.textContent = 'Backend offline — deploy to Vercel first'; text.style.color = 'var(--red)'; }
+    if (prov) { prov.textContent = ''; }
   }
 }
 
@@ -408,7 +408,7 @@ async function sendMessage(override) {
   try {
     const sys      = JARVISPHINE.getSystemPrompt(settings.userName || 'Friend', memory, settings.personality || 'sharp');
     const msgs     = chatHistory.slice(-12).map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content }));
-    const response = await JARVISPHINE.callAPI(msgs, sys, settings);
+    const response = await JARVISPHINE.callAPI(msgs, sys);
     removeTyping();
     sendJarvisphineMessage(response);
   } catch (err) {
@@ -480,7 +480,7 @@ async function triggerMorningPlanPrompt() {
   if (!chatHistory.length) return;
   try {
     const prompt = JARVISPHINE.getMorningPlanPrompt(settings.userName || 'Friend', memory);
-    const resp   = await JARVISPHINE.callAPI([{ role: 'user', content: prompt }], '', settings);
+    const resp   = await JARVISPHINE.callAPI([{ role: 'user', content: prompt }], '');
     sendJarvisphineMessage(resp, true);
   } catch { /* silent */ }
 }
@@ -710,7 +710,7 @@ function checkScheduledEvents() {
 async function triggerCheckIn(slotName) {
   try {
     const prompt = JARVISPHINE.getCheckInPrompt(settings.userName || 'Friend', memory, slotName);
-    const resp   = await JARVISPHINE.callAPI([{ role: 'user', content: prompt }], '', settings);
+    const resp   = await JARVISPHINE.callAPI([{ role: 'user', content: prompt }], '');
     showScreen('chat');
     sendJarvisphineMessage(resp, true);
     showToast('// CHECK-IN FROM JARVISPHINE', 'gold');
@@ -725,7 +725,7 @@ function generateMissionBriefing() {
   const btn = document.getElementById('generateBriefing');
   btn.disabled = true; btn.textContent = '⚡ GENERATING...';
   const prompt = JARVISPHINE.getMissionBriefing(settings.userName || 'Friend', memory);
-  JARVISPHINE.callAPI([{ role: 'user', content: prompt }], '', settings)
+  JARVISPHINE.callAPI([{ role: 'user', content: prompt }], '')
     .then(resp => {
       document.getElementById('missionBriefingText').innerHTML = resp.replace(/\n/g, '<br>');
       btn.disabled = false; btn.textContent = '⚡ REGENERATE BRIEFING';
@@ -738,7 +738,7 @@ function generateMissionBriefing() {
 
 function triggerManualDebrief() {
   const prompt = JARVISPHINE.getDailyDebrief(settings.userName || 'Friend', memory);
-  JARVISPHINE.callAPI([{ role: 'user', content: prompt }], '', settings)
+  JARVISPHINE.callAPI([{ role: 'user', content: prompt }], '')
     .then(resp => {
       const today = new Date().toDateString();
       if (!memory.debriefs) memory.debriefs = [];
@@ -760,7 +760,7 @@ async function generateIntelBrief() {
   const topics = (settings.topics || 'science, psychology, history, philosophy').split(',').map(t => t.trim()).filter(Boolean);
   const prompt = JARVISPHINE.getDailyIntelBrief(topics);
   try {
-    const resp = await JARVISPHINE.callAPI([{ role: 'user', content: prompt }], '', settings);
+    const resp = await JARVISPHINE.callAPI([{ role: 'user', content: prompt }], '');
     // Parse topic tag
     const topicMatch = resp.match(/^\[([^\]]+)\]/);
     if (topicMatch) {
@@ -786,7 +786,7 @@ async function generatePatternInsights() {
   const history = memory.history || [];
   const prompt  = JARVISPHINE.getPatternInsightsPrompt(settings.userName || 'Friend', history);
   try {
-    const resp = await JARVISPHINE.callAPI([{ role: 'user', content: prompt }], '', settings);
+    const resp = await JARVISPHINE.callAPI([{ role: 'user', content: prompt }], '');
     el.innerHTML = resp.replace(/\n/g, '<br>');
     showToast('// PATTERNS ANALYZED', 'green');
   } catch (err) {

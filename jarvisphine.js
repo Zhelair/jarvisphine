@@ -5,40 +5,44 @@
 // with a short hash of the user's passphrase so different users/passphrases
 // see completely separate data. No real crypto needed — just privacy separation.
 const NAMESPACE = {
+  _passphrase: null,
   _prefix: null,
 
   // Compute a short stable prefix from a passphrase string
   compute(passphrase) {
-    // Simple djb2-style hash → base36 string, 8 chars
     let hash = 5381;
     for (let i = 0; i < passphrase.length; i++) {
       hash = ((hash << 5) + hash) + passphrase.charCodeAt(i);
-      hash = hash & hash; // 32-bit int
+      hash = hash & hash;
     }
-    const unsigned = hash >>> 0;
-    return 'u' + unsigned.toString(36).padStart(7, '0');
+    return 'u' + (hash >>> 0).toString(36).padStart(7, '0');
   },
 
   set(passphrase) {
-    this._prefix = this.compute(passphrase);
-    localStorage.setItem('jarvisphine_ns', this._prefix);
+    this._passphrase = passphrase;
+    this._prefix     = this.compute(passphrase);
+    localStorage.setItem('jarvisphine_pass', passphrase);
+    localStorage.setItem('jarvisphine_ns',   this._prefix);
+  },
+
+  getPassphrase() {
+    if (!this._passphrase) this._passphrase = localStorage.getItem('jarvisphine_pass');
+    return this._passphrase || '';
   },
 
   get() {
-    if (!this._prefix) {
-      this._prefix = localStorage.getItem('jarvisphine_ns');
-    }
+    if (!this._prefix) this._prefix = localStorage.getItem('jarvisphine_ns');
     return this._prefix;
   },
 
   clear() {
-    this._prefix = null;
+    this._passphrase = null;
+    this._prefix     = null;
+    localStorage.removeItem('jarvisphine_pass');
     localStorage.removeItem('jarvisphine_ns');
   },
 
-  isSet() {
-    return !!this.get();
-  },
+  isSet() { return !!this.get(); },
 
   // Prefix a Supabase key
   key(k) {
@@ -587,19 +591,20 @@ Reflect on the day honestly. Warm send-off for the night. 2-3 sentences.`
     return data;
   },
 
-  // ── API Call — via backend proxy ──────────────────
-  async callAPI(messages, systemPrompt, settings) {
+  // ── API Call — via Vercel serverless proxy ────────
+  async callAPI(messages, systemPrompt) {
     const r = await fetch('/api/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        messages, systemPrompt,
-        provider: settings.provider || 'claude'
-      })
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Passphrase': NAMESPACE.getPassphrase()
+      },
+      body: JSON.stringify({ messages, systemPrompt })
     });
     if (!r.ok) {
       const e = await r.json().catch(() => ({}));
-      throw new Error(e.error || `Server error ${r.status} — is the backend running?`);
+      if (r.status === 401) throw new Error('Invalid passphrase — check your access code');
+      throw new Error(e.error || `Server error ${r.status}`);
     }
     const d = await r.json();
     return d.reply;
