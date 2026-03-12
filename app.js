@@ -1232,9 +1232,33 @@ function initPassphrase() {
     });
   }, 40);
 
-  function submit() {
+  async function submit() {
     const val = input.value.trim();
     if (!val) { input.classList.add('error'); setTimeout(() => input.classList.remove('error'), 600); return; }
+
+    const errEl = document.getElementById('passphraseError');
+    btn.disabled = true;
+    btn.textContent = 'VERIFYING...';
+    if (errEl) errEl.style.display = 'none';
+
+    try {
+      const r = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Passphrase': val },
+        body: JSON.stringify({ messages: [], systemPrompt: 'ping' })
+      });
+      if (r.status === 401) {
+        btn.disabled = false;
+        btn.textContent = 'CONNECT';
+        input.classList.add('error');
+        setTimeout(() => input.classList.remove('error'), 600);
+        if (errEl) { errEl.textContent = '// ACCESS DENIED — INVALID CODE'; errEl.style.display = 'block'; }
+        return;
+      }
+    } catch (e) {
+      // Network error — allow through (offline scenario)
+    }
+
     clearInterval(matrixInterval);
     NAMESPACE.set(val);
     overlay.style.opacity = '0';
