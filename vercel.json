@@ -1,14 +1,4 @@
 {
   "version": 2,
-  "buildCommand": null,
-  "outputDirectory": ".",
-  "functions": {
-    "api/health.js": { "memory": 128, "maxDuration": 10 },
-    "api/chat.js":   { "memory": 128, "maxDuration": 30 }
-  },
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/api/$1" },
-    { "src": "/(.*\\.(css|js|png|ico|svg|json))", "dest": "/$1" },
-    { "src": "/(.*)", "dest": "/index.html" }
-  ]
+  "outputDirectory": "."
 }
