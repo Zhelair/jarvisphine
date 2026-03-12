@@ -1,5 +1,5 @@
-// api/chat.js — Vercel Serverless Function
-// Proxies AI calls server-side so API keys are never exposed to browser
+// api/chat.js — Vercel Serverless Function (CommonJS)
+// Proxies DeepSeek calls server-side; validates passphrase before responding
 
 const https = require('https');
 
@@ -24,60 +24,47 @@ function httpsPost(hostname, urlPath, headers, body) {
   });
 }
 
-async function proxyChat({ messages, systemPrompt, provider }) {
-  const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
-  const CLAUDE_API_KEY   = process.env.CLAUDE_API_KEY   || '';
+module.exports = async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Passphrase');
 
-  // Prefer DeepSeek — cheap and reliable for this use case
-  if (DEEPSEEK_API_KEY && provider !== 'claude') {
+  if (req.method === 'OPTIONS') { res.status(204).end(); return; }
+  if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return; }
+
+  // ── Passphrase validation ──────────────────────────
+  const validPhrases = (process.env.VALID_PASSPHRASES || '')
+    .split(',').map(p => p.trim()).filter(Boolean);
+  const incoming = (req.headers['x-passphrase'] || '').trim();
+
+  if (validPhrases.length > 0 && !validPhrases.includes(incoming)) {
+    res.status(401).json({ error: 'Invalid passphrase' });
+    return;
+  }
+
+  // ── DeepSeek proxy ────────────────────────────────
+  const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
+  if (!DEEPSEEK_API_KEY) {
+    res.status(500).json({ error: 'DEEPSEEK_API_KEY not configured in Vercel environment variables.' });
+    return;
+  }
+
+  try {
+    const { messages, systemPrompt } = req.body;
     const payload = JSON.stringify({
       model: 'deepseek-chat',
       max_tokens: 500,
       messages: [{ role: 'system', content: systemPrompt }, ...messages]
     });
-    const res = await httpsPost('api.deepseek.com', '/chat/completions', {
+    const result = await httpsPost('api.deepseek.com', '/chat/completions', {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
     }, payload);
-    if (res.error) throw new Error(res.error.message || 'DeepSeek error');
-    return res.choices[0].message.content;
-  }
 
-  if (!CLAUDE_API_KEY) {
-    throw new Error('No AI API key configured. Set DEEPSEEK_API_KEY or CLAUDE_API_KEY in Vercel environment variables.');
-  }
-
-  const payload = JSON.stringify({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 500,
-    system: systemPrompt,
-    messages
-  });
-  const res = await httpsPost('api.anthropic.com', '/v1/messages', {
-    'Content-Type': 'application/json',
-    'x-api-key': CLAUDE_API_KEY,
-    'anthropic-version': '2023-06-01'
-  }, payload);
-  if (res.error) throw new Error(res.error.message || 'Claude error');
-  return res.content[0].text;
-}
-
-export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  if (req.method === 'OPTIONS') { res.status(204).end(); return; }
-  if (req.method !== 'POST') {
-    res.status(405).json({ error: 'Method not allowed' });
-    return;
-  }
-
-  try {
-    const reply = await proxyChat(req.body);
-    res.status(200).json({ reply });
+    if (result.error) throw new Error(result.error.message || 'DeepSeek error');
+    res.status(200).json({ reply: result.choices[0].message.content });
   } catch (e) {
     console.error('[chat] Error:', e.message);
     res.status(500).json({ error: e.message });
   }
-}
+};
