@@ -27,8 +27,8 @@
 
   /* Text */
   --text:    #dde8ff;
-  --text2:   #50688a;
-  --text3:   #1c2640;
+  --text2:   #6b87a8;
+  --text3:   #2e3f5c;
 
   /* Glows */
   --glow-blue:  0 0 16px rgba(0,212,255,0.6), 0 0 35px rgba(0,212,255,0.2);
@@ -69,6 +69,67 @@ body::before {
   position: fixed; inset: 0;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='52' viewBox='0 0 30 52'%3E%3Cpath d='M15 1L29 9v16L15 33 1 25V9z' fill='none' stroke='rgba(0,212,255,0.03)' stroke-width='0.8'/%3E%3Cpath d='M15 33L29 41v10H1V41z' fill='none' stroke='rgba(0,212,255,0.03)' stroke-width='0.8'/%3E%3C/svg%3E");
   pointer-events: none; z-index: 0;
+}
+
+/* ── PASSPHRASE ────────────────────────────────────── */
+#passphraseOverlay {
+  position: fixed; inset: 0; background: #000; z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+}
+#passphraseCanvas {
+  position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.4;
+}
+.passphrase-hud {
+  position: relative; z-index: 2;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 12px; padding: 36px 28px; text-align: center;
+  max-width: 340px; width: 90%;
+}
+.passphrase-logo {
+  width: 64px; height: 64px; border-radius: 50%;
+  border: 2px solid var(--blue); box-shadow: var(--glow-blue);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 24px;
+  color: var(--blue); background: var(--bg3);
+  animation: avatarGlow 3s ease-in-out infinite; margin-bottom: 4px;
+}
+.passphrase-title {
+  font-family: 'Orbitron', sans-serif; font-size: 22px; font-weight: 900;
+  letter-spacing: 4px; color: var(--blue); text-shadow: var(--glow-blue);
+}
+.passphrase-sub {
+  font-family: 'Orbitron', sans-serif; font-size: 8px; letter-spacing: 3px;
+  color: var(--text3); text-transform: uppercase; margin-bottom: 8px;
+}
+.passphrase-field-wrap { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+.passphrase-label {
+  font-family: 'Orbitron', sans-serif; font-size: 8px; letter-spacing: 3px;
+  color: var(--text2); text-align: left; text-transform: uppercase;
+}
+#passphraseInput {
+  width: 100%; background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: var(--radius); padding: 12px 14px;
+  font-family: 'Rajdhani', sans-serif; font-size: 16px; font-weight: 500;
+  color: var(--text); outline: none; letter-spacing: 2px; text-align: center;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+#passphraseInput:focus { border-color: var(--blue); box-shadow: 0 0 12px rgba(0,212,255,0.25); }
+#passphraseInput::placeholder { color: var(--text3); letter-spacing: 1px; font-size: 13px; }
+#passphraseInput.error { border-color: var(--red); box-shadow: 0 0 10px rgba(255,68,102,0.4); animation: shake 0.4s ease; }
+@keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+#passphraseBtn {
+  width: 100%; padding: 12px; background: transparent;
+  border: 1px solid var(--blue); border-radius: var(--radius);
+  font-family: 'Orbitron', sans-serif; font-size: 10px; font-weight: 700;
+  letter-spacing: 4px; color: var(--blue); cursor: pointer;
+  text-transform: uppercase; transition: all 0.2s;
+  box-shadow: var(--glow-blue);
+}
+#passphraseBtn:hover { background: rgba(0,212,255,0.12); box-shadow: 0 0 20px rgba(0,212,255,0.5); }
+#passphraseBtn:active { transform: scale(0.97); }
+.passphrase-hint {
+  font-size: 11px; color: var(--text3); font-family: 'Rajdhani', sans-serif;
+  font-weight: 400; margin-top: 4px;
 }
 
 /* ── BOOT ──────────────────────────────────────────── */
@@ -214,8 +275,8 @@ body::before {
 }
 
 .bubble {
-  max-width: 78%; padding: 9px 13px;
-  font-size: 14px; line-height: 1.5;
+  max-width: 78%; padding: 10px 14px;
+  font-size: 15px; line-height: 1.6;
   font-family: 'Rajdhani', sans-serif; font-weight: 500;
 }
 
@@ -263,10 +324,10 @@ body::before {
 }
 #chatInput {
   flex: 1; background: var(--bg3); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 9px 12px;
-  font-family: 'Rajdhani', sans-serif; font-size: 14px; font-weight: 500;
+  border-radius: var(--radius); padding: 10px 13px;
+  font-family: 'Rajdhani', sans-serif; font-size: 15px; font-weight: 500;
   color: var(--text); resize: none; outline: none;
-  max-height: 90px; line-height: 1.4; transition: border-color 0.2s, box-shadow 0.2s;
+  max-height: 90px; line-height: 1.5; transition: border-color 0.2s, box-shadow 0.2s;
 }
 #chatInput:focus { border-color: var(--blue); box-shadow: 0 0 8px rgba(0,212,255,0.2); }
 #chatInput::placeholder { color: var(--text3); }
@@ -354,11 +415,12 @@ body::before {
 }
 
 .panel-label {
-  font-family: 'Orbitron', sans-serif; font-size: 8px; font-weight: 600;
-  letter-spacing: 3px; text-transform: uppercase; color: var(--text3);
-  margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+  font-family: 'Orbitron', sans-serif; font-size: 9px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase; color: var(--blue);
+  opacity: 0.7;
+  margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
 }
-.panel-label::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--border), transparent); }
+.panel-label::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(0,212,255,0.2), transparent); }
 
 /* ── HOME / HQ ─────────────────────────────────────── */
 .home-scroll { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
@@ -421,7 +483,7 @@ body::before {
   border-radius: var(--radius); padding: 10px; position: relative; overflow: hidden;
 }
 .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: var(--blue); opacity: 0.08; }
-.stat-label { font-family: 'Orbitron', sans-serif; font-size: 7px; letter-spacing: 2px; color: var(--text3); text-transform: uppercase; margin-bottom: 4px; }
+.stat-label { font-family: 'Orbitron', sans-serif; font-size: 8px; letter-spacing: 1px; color: var(--text2); text-transform: uppercase; margin-bottom: 4px; }
 .stat-value {
   font-family: 'Orbitron', sans-serif; font-size: 20px; font-weight: 900;
   color: var(--blue); text-shadow: var(--glow-blue); transition: all 0.15s;
@@ -494,8 +556,8 @@ body::before {
 .quick-log-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 5px; }
 .quick-log {
   background: var(--bg3); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 7px 3px;
-  font-family: 'Rajdhani', sans-serif; font-size: 10px; font-weight: 500;
+  border-radius: var(--radius); padding: 8px 4px;
+  font-family: 'Rajdhani', sans-serif; font-size: 11px; font-weight: 500;
   color: var(--text2); cursor: pointer; text-align: center; transition: all 0.15s;
 }
 .quick-log:hover { border-color: var(--blue); color: var(--blue); background: rgba(0,212,255,0.05); }
@@ -505,7 +567,7 @@ body::before {
 /* Mission */
 .mission-panel { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; position: relative; }
 .mission-panel::before { content: '// CLASSIFIED'; position: absolute; top: 7px; right: 10px; font-family: 'Orbitron', sans-serif; font-size: 6px; letter-spacing: 2px; color: var(--blue); opacity: 0.4; }
-#missionBriefingText { font-family: 'Rajdhani', sans-serif; font-size: 12px; font-weight: 400; color: var(--text2); line-height: 1.6; min-height: 45px; margin-bottom: 10px; }
+#missionBriefingText { font-family: 'Rajdhani', sans-serif; font-size: 13px; font-weight: 400; color: var(--text2); line-height: 1.7; min-height: 45px; margin-bottom: 10px; }
 
 /* Buttons */
 .btn-hud {
@@ -546,8 +608,8 @@ canvas { width: 100%; display: block; }
 
 /* Intel brief + pattern insights */
 #intelBriefText, #patternInsightsText {
-  font-family: 'Rajdhani', sans-serif; font-size: 13px; font-weight: 400;
-  color: var(--text2); line-height: 1.7; min-height: 40px; margin-bottom: 10px;
+  font-family: 'Rajdhani', sans-serif; font-size: 14px; font-weight: 400;
+  color: var(--text2); line-height: 1.75; min-height: 40px; margin-bottom: 10px;
 }
 #intelBriefText .intel-topic {
   font-family: 'Orbitron', sans-serif; font-size: 8px; letter-spacing: 2px;
@@ -581,8 +643,8 @@ canvas { width: 100%; display: block; }
 /* ── SETTINGS ──────────────────────────────────────── */
 .settings-scroll { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 9px; }
 .settings-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; }
-.settings-card h3 { font-family: 'Orbitron', sans-serif; font-size: 8px; font-weight: 600; letter-spacing: 2px; color: var(--blue); text-transform: uppercase; margin-bottom: 4px; }
-.settings-card p { font-size: 11px; color: var(--text3); margin-bottom: 9px; line-height: 1.5; }
+.settings-card h3 { font-family: 'Orbitron', sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 2px; color: var(--blue); text-transform: uppercase; margin-bottom: 6px; }
+.settings-card p { font-size: 12px; color: var(--text2); margin-bottom: 10px; line-height: 1.6; }
 .settings-card a { color: var(--gold); text-decoration: none; }
 
 .personality-modes { display: flex; gap: 6px; margin-bottom: 8px; }
@@ -705,9 +767,9 @@ canvas { width: 100%; display: block; }
   background: linear-gradient(90deg, transparent, var(--blue), var(--gold), var(--blue), transparent);
 }
 .nav-btn {
-  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
-  background: none; border: none; cursor: pointer; padding: 4px 0;
-  color: var(--text3); font-family: 'Orbitron', sans-serif; font-size: 6px;
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  background: none; border: none; cursor: pointer; padding: 5px 0;
+  color: var(--text3); font-family: 'Orbitron', sans-serif; font-size: 7px;
   letter-spacing: 1px; text-transform: uppercase; transition: color 0.2s;
 }
 .nav-btn svg { width: 16px; height: 16px; }

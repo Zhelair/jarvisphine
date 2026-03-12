@@ -1,5 +1,52 @@
 // jarvisphine.js — v6.0 — Charcoal + Electric Blue
 
+// ── Passphrase / Namespace ────────────────────────────
+// Simple passphrase-based namespacing: all Supabase keys are prefixed
+// with a short hash of the user's passphrase so different users/passphrases
+// see completely separate data. No real crypto needed — just privacy separation.
+const NAMESPACE = {
+  _prefix: null,
+
+  // Compute a short stable prefix from a passphrase string
+  compute(passphrase) {
+    // Simple djb2-style hash → base36 string, 8 chars
+    let hash = 5381;
+    for (let i = 0; i < passphrase.length; i++) {
+      hash = ((hash << 5) + hash) + passphrase.charCodeAt(i);
+      hash = hash & hash; // 32-bit int
+    }
+    const unsigned = hash >>> 0;
+    return 'u' + unsigned.toString(36).padStart(7, '0');
+  },
+
+  set(passphrase) {
+    this._prefix = this.compute(passphrase);
+    localStorage.setItem('jarvisphine_ns', this._prefix);
+  },
+
+  get() {
+    if (!this._prefix) {
+      this._prefix = localStorage.getItem('jarvisphine_ns');
+    }
+    return this._prefix;
+  },
+
+  clear() {
+    this._prefix = null;
+    localStorage.removeItem('jarvisphine_ns');
+  },
+
+  isSet() {
+    return !!this.get();
+  },
+
+  // Prefix a Supabase key
+  key(k) {
+    const p = this.get();
+    return p ? `${p}_${k}` : k;
+  }
+};
+
 // ── Supabase ─────────────────────────────────────────
 const SUPABASE = {
   url: 'https://aufkmpzzxbdzhnodrpkd.supabase.co',
@@ -16,7 +63,8 @@ const SUPABASE = {
 
   async get(key) {
     try {
-      const r = await fetch(`${this.url}/rest/v1/jarvisphine_kv?key=eq.${key}&select=value`, {
+      const nsKey = NAMESPACE.key(key);
+      const r = await fetch(`${this.url}/rest/v1/jarvisphine_kv?key=eq.${nsKey}&select=value`, {
         headers: { 'apikey': this.key, 'Authorization': `Bearer ${this.key}` }
       });
       if (!r.ok) return null;
@@ -27,10 +75,11 @@ const SUPABASE = {
 
   async set(key, value) {
     try {
+      const nsKey = NAMESPACE.key(key);
       await fetch(`${this.url}/rest/v1/jarvisphine_kv`, {
         method: 'POST',
         headers: this.headers(),
-        body: JSON.stringify({ key, value, updated_at: new Date().toISOString() })
+        body: JSON.stringify({ key: nsKey, value, updated_at: new Date().toISOString() })
       });
       return true;
     } catch { return false; }
@@ -38,14 +87,19 @@ const SUPABASE = {
 
   async getAll(keys) {
     try {
-      const keysStr = keys.map(k => `"${k}"`).join(',');
+      const nsKeys = keys.map(k => NAMESPACE.key(k));
+      const keysStr = nsKeys.map(k => `"${k}"`).join(',');
       const r = await fetch(`${this.url}/rest/v1/jarvisphine_kv?key=in.(${keysStr})&select=key,value`, {
         headers: { 'apikey': this.key, 'Authorization': `Bearer ${this.key}` }
       });
       if (!r.ok) return {};
       const d = await r.json();
       const result = {};
-      d.forEach(row => { result[row.key] = row.value; });
+      // Strip namespace prefix when returning keys to caller
+      d.forEach(row => {
+        const originalKey = keys.find(k => NAMESPACE.key(k) === row.key) || row.key;
+        result[originalKey] = row.value;
+      });
       return result;
     } catch { return {}; }
   }
@@ -405,10 +459,10 @@ Reflect on the day honestly. Warm send-off for the night. 2-3 sentences.`
     try {
       const s = JSON.parse(localStorage.getItem('jarvisphine_settings') || '{}');
       if (!s.personality) s.personality = 'sharp';
-      if (!s.provider)    s.provider    = 'claude';
+      if (!s.provider)    s.provider    = 'deepseek';
       if (!s.topics)      s.topics      = 'science, psychology, history, philosophy';
       return s;
-    } catch { return { personality: 'sharp', provider: 'claude', topics: 'science, psychology, history, philosophy' }; }
+    } catch { return { personality: 'sharp', provider: 'deepseek', topics: 'science, psychology, history, philosophy' }; }
   },
 
   saveSettings(s) { localStorage.setItem('jarvisphine_settings', JSON.stringify(s)); },

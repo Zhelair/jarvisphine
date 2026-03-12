@@ -9,6 +9,24 @@
 <body>
 
 <!-- ═══════════════════════════════════════════════════ -->
+<!-- PASSPHRASE SCREEN                                  -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div id="passphraseOverlay">
+  <canvas id="passphraseCanvas"></canvas>
+  <div class="passphrase-hud">
+    <div class="passphrase-logo">J</div>
+    <h1 class="passphrase-title">JARVISPHINE</h1>
+    <p class="passphrase-sub">companion system // v6.0</p>
+    <div class="passphrase-field-wrap">
+      <label class="passphrase-label">// ACCESS CODE</label>
+      <input type="password" id="passphraseInput" placeholder="enter passphrase..." autocomplete="off" spellcheck="false">
+      <button id="passphraseBtn">CONNECT</button>
+    </div>
+    <p class="passphrase-hint">same passphrase on all your devices</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
 <!-- BOOT SCREEN                                        -->
 <!-- ═══════════════════════════════════════════════════ -->
 <div id="bootOverlay">
@@ -400,7 +418,6 @@
         <div class="server-dot offline" id="serverDot"></div>
         <span id="serverStatusText" style="color:var(--text2)">Checking server...</span>
       </div>
-      <p>AI calls are proxied through the backend server. Run: <code style="color:var(--blue);font-size:10px">CLAUDE_API_KEY=sk-ant-... node server.js</code></p>
       <div id="providerStatus" style="font-family:'Orbitron',sans-serif;font-size:7px;letter-spacing:2px;color:var(--green);margin-top:4px"></div>
     </div>
 
@@ -420,8 +437,8 @@
       <h3>AI Provider</h3>
       <p>Preference sent to server (server must have the key configured).</p>
       <div class="provider-toggle">
-        <button class="provider-btn active" data-provider="claude">Claude</button>
-        <button class="provider-btn" data-provider="deepseek">DeepSeek</button>
+        <button class="provider-btn" data-provider="claude">Claude</button>
+        <button class="provider-btn active" data-provider="deepseek">DeepSeek</button>
       </div>
     </div>
 
@@ -458,6 +475,14 @@
       <h3>Supabase Sync</h3>
       <p>Auto-syncs all data to cloud. No manual action needed.</p>
       <button class="btn-hud" id="forceSyncBtn" style="width:100%;margin-top:4px">🔄 FORCE SYNC NOW</button>
+    </div>
+
+    <!-- Passphrase -->
+    <div class="settings-card">
+      <h3>Access Code</h3>
+      <p>Your data is tied to your passphrase. Same passphrase = same data on any device.</p>
+      <button class="btn-hud" id="changePassBtn" style="width:100%;margin-bottom:6px">🔑 CHANGE PASSPHRASE</button>
+      <button class="btn-secondary" id="lockBtn" style="width:100%">🔒 LOCK (SIGN OUT)</button>
     </div>
 
     <!-- Danger Zone -->
